@@ -199,6 +199,7 @@ object Runner extends EitherLogging {
       sparkSubmitFiles,
       sparkSubmitExtraClasspaths,
       sparkSubmitKryo,
+      Seq("--driver-java-options", s"-Dpio.home=${pioHome}"),
       Seq(mainJar),
       detectFilePaths(fs, sa.scratchUri, classArgs),
       Seq("--env", pioEnvVars),

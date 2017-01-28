@@ -36,6 +36,7 @@ mkdir -p ${DISTDIR}/conf
 mkdir -p ${DISTDIR}/lib
 mkdir -p ${DISTDIR}/project
 mkdir -p ${DISTDIR}/sbt
+mkdir -p ${DISTDIR}/log
 
 cp ${FWDIR}/bin/* ${DISTDIR}/bin || :
 cp ${FWDIR}/conf/* ${DISTDIR}/conf

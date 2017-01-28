@@ -85,5 +85,6 @@ else
 fi
 
 export CLASSPATH
+export JAVA_OPTS="$JAVA_OPTS -Dpio.home=$PIO_HOME"
 
 exec "$RUNNER" -cp "$CLASSPATH" $JAVA_OPTS "$@"

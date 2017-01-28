@@ -405,6 +405,7 @@ object Engine extends EitherLogging {
       } else {
         ""
       }) +
+      "--driver-java-options -Dpio.home=${pioHome} " +
       "--class " +
       s"${mainClass} ${sparkArgs.sparkPassThrough.mkString(" ")} " +
       coreAssembly(pioHome) + " " +
