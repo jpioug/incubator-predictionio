@@ -18,7 +18,6 @@
 #
 
 OS=`uname`
-PIO_VERSION=0.11.0-SNAPSHOT
 SPARK_VERSION=1.6.3
 # Looks like support for Elasticsearch 2.0 will require 2.0 so deferring
 #ELASTICSEARCH_VERSION=1.7.6
@@ -28,7 +27,7 @@ POSTGRES_VERSION=9.4-1204.jdbc41
 MYSQL_VERSION=5.1.37
 PIO_DIR=$HOME/PredictionIO
 USER_PROFILE=$HOME/.profile
-PIO_FILE=PredictionIO-${PIO_VERSION}.tar.gz
+PIO_FILE=PredictionIO-*.tar.gz
 TEMP_DIR=/tmp
 
 DISTRO_DEBIAN="Debian/Ubuntu"
@@ -57,7 +56,7 @@ confirm () {
   esac
 }
 
-echo -e "\033[1;32mWelcome to PredictionIO $PIO_VERSION!\033[0m"
+echo -e "\033[1;32mWelcome to PredictionIO !\033[0m"
 
 # Detect OS
 if [[ "$OS" = "Darwin" ]]; then
@@ -282,22 +281,24 @@ echo -e "\033[1;36mStarting PredictionIO setup in:\033[0m $pio_dir"
 
 cd ${TEMP_DIR}
 
-if [[ ! -e ${PIO_FILE} ]]; then
+files=$(ls PredictionIO*.tar.gz 2> /dev/null | wc -l)
+
+if [[ $files == 0 ]]; then
   echo "Downloading PredictionIO..."
-  curl -L https://codeload.github.com/apache/incubator-predictionio/tar.gz/develop > incubator-predictionio-develop.tar.gz 
+  curl -L https://codeload.github.com/apache/incubator-predictionio/tar.gz/master > incubator-predictionio-master.tar.gz 
 
-  tar zxf incubator-predictionio-develop.tar.gz 
+  tar zxf incubator-predictionio-master.tar.gz 
 
-  mv incubator-predictionio-develop PredictionIO-${PIO_VERSION}
+  mv incubator-predictionio-master PredictionIO
 
-  sh PredictionIO-${PIO_VERSION}/make-distribution.sh
-  cp PredictionIO-${PIO_VERSION}/${PIO_FILE} ${TEMP_DIR}
-  rm -r PredictionIO-${PIO_VERSION}
+  sh PredictionIO/make-distribution.sh
+  cp PredictionIO/${PIO_FILE} ${TEMP_DIR}
+  rm -r PredictionIO
 fi
 
 tar zxf ${PIO_FILE}
 rm -rf ${pio_dir}
-mv PredictionIO-${PIO_VERSION} ${pio_dir}
+mv PredictionIO*/ ${pio_dir}
 
 if [[ $USER ]]; then
   chown -R $USER ${pio_dir}
@@ -467,7 +468,7 @@ echo -e "\033[1;32mInstallation done!\033[0m"
 
 
 echo "--------------------------------------------------------------------------------"
-echo -e "\033[1;32mInstallation of PredictionIO $PIO_VERSION complete!\033[0m"
+echo -e "\033[1;32mInstallation of PredictionIO complete!\033[0m"
 echo -e "\033[1;32mPlease follow documentation at http://predictionio.incubator.apache.org/start/download/ to download the engine template based on your needs\033[0m"
 echo -e
 echo -e "\033[1;33mCommand Line Usage Notes:\033[0m"

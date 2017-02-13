@@ -19,11 +19,11 @@ import sbt._
 import Keys._
 
 object PIOBuild extends Build {
+  val elasticsearch5Version = SettingKey[String](
+    "elasticsearch5-version",
+    "The version of Elasticsearch 5.x used for building.")
   val elasticsearchVersion = SettingKey[String](
     "elasticsearch-version",
-    "The version of Elasticsearch used for building.")
-  val elasticsearch1Version = SettingKey[String](
-    "elasticsearch1-version",
     "The version of Elasticsearch 1.x used for building.")
   val json4sVersion = SettingKey[String](
     "json4s-version",

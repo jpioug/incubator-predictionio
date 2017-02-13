@@ -15,45 +15,44 @@
  * limitations under the License.
  */
 
+
 package org.apache.predictionio.data.storage.elasticsearch
 
-import java.io.IOException
-
-import scala.collection.JavaConverters.mapAsJavaMapConverter
-
-import org.apache.http.entity.ContentType
-import org.apache.http.nio.entity.NStringEntity
-import org.apache.http.util.EntityUtils
+import grizzled.slf4j.Logging
+import org.apache.predictionio.data.storage.StorageClientConfig
 import org.apache.predictionio.data.storage.AccessKey
 import org.apache.predictionio.data.storage.AccessKeys
-import org.apache.predictionio.data.storage.StorageClientConfig
-import org.elasticsearch.client.RestClient
-import org.json4s._
+import org.elasticsearch.ElasticsearchException
+import org.elasticsearch.client.Client
+import org.elasticsearch.index.query.FilterBuilders._
 import org.json4s.JsonDSL._
+import org.json4s._
 import org.json4s.native.JsonMethods._
+import org.json4s.native.Serialization.read
 import org.json4s.native.Serialization.write
 
-import grizzled.slf4j.Logging
-import org.elasticsearch.client.ResponseException
+import scala.util.Random
 
 /** Elasticsearch implementation of AccessKeys. */
-class ESAccessKeys(client: ESClient, config: StorageClientConfig, index: String)
+class ESAccessKeys(client: Client, config: StorageClientConfig, index: String)
     extends AccessKeys with Logging {
   implicit val formats = DefaultFormats.lossless
   private val estype = "accesskeys"
 
-  val restClient = client.open()
-  try {
-    ESUtils.createIndex(restClient, index)
-    val mappingJson =
+  val indices = client.admin.indices
+  val indexExistResponse = indices.prepareExists(index).get
+  if (!indexExistResponse.isExists) {
+    indices.prepareCreate(index).get
+  }
+  val typeExistResponse = indices.prepareTypesExists(index).setTypes(estype).get
+  if (!typeExistResponse.isExists) {
+    val json =
       (estype ->
-        ("_all" -> ("enabled" -> 0)) ~
         ("properties" ->
-          ("key" -> ("type" -> "keyword")) ~
-          ("events" -> ("type" -> "keyword"))))
-    ESUtils.createMapping(restClient, index, estype, compact(render(mappingJson)))
-  } finally {
-    restClient.close()
+          ("key" -> ("type" -> "string") ~ ("index" -> "not_analyzed")) ~
+          ("events" -> ("type" -> "string") ~ ("index" -> "not_analyzed"))))
+    indices.preparePutMapping(index).setType(estype).
+      setSource(compact(render(json))).get
   }
 
   def insert(accessKey: AccessKey): Option[String] = {
@@ -62,114 +61,59 @@ class ESAccessKeys(client: ESClient, config: StorageClientConfig, index: String)
     Some(key)
   }
 
-  def get(id: String): Option[AccessKey] = {
-    val restClient = client.open()
+  def get(key: String): Option[AccessKey] = {
     try {
-      val response = restClient.performRequest(
-        "GET",
-        s"/$index/$estype/$id",
-        Map.empty[String, String].asJava)
-      val jsonResponse = parse(EntityUtils.toString(response.getEntity))
-      (jsonResponse \ "found").extract[Boolean] match {
-        case true =>
-          Some((jsonResponse \ "_source").extract[AccessKey])
-        case _ =>
-          None
-      }
+      val response = client.prepareGet(
+        index,
+        estype,
+        key).get()
+      Some(read[AccessKey](response.getSourceAsString))
     } catch {
-      case e: ResponseException =>
-        e.getResponse.getStatusLine.getStatusCode match {
-          case 404 => None
-          case _ =>
-            error(s"Failed to access to /$index/$estype/$id", e)
-            None
-        }
-      case e: IOException =>
-        error("Failed to access to /$index/$estype/$key", e)
+      case e: ElasticsearchException =>
+        error(e.getMessage)
         None
-    } finally {
-      restClient.close()
+      case e: NullPointerException => None
     }
   }
 
   def getAll(): Seq[AccessKey] = {
-    val restClient = client.open()
     try {
-      val json =
-        ("query" ->
-          ("match_all" -> List.empty))
-      ESUtils.getAll[AccessKey](restClient, index, estype, compact(render(json)))
+      val builder = client.prepareSearch(index).setTypes(estype)
+      ESUtils.getAll[AccessKey](client, builder)
     } catch {
-      case e: IOException =>
-        error("Failed to access to /$index/$estype/_search", e)
-        Nil
-    } finally {
-      restClient.close()
+      case e: ElasticsearchException =>
+        error(e.getMessage)
+        Seq[AccessKey]()
     }
   }
 
   def getByAppid(appid: Int): Seq[AccessKey] = {
-    val restClient = client.open()
     try {
-      val json =
-        ("query" ->
-          ("term" ->
-            ("appid" -> appid)))
-      ESUtils.getAll[AccessKey](restClient, index, estype, compact(render(json)))
+      val builder = client.prepareSearch(index).setTypes(estype).
+        setPostFilter(termFilter("appid", appid))
+      ESUtils.getAll[AccessKey](client, builder)
     } catch {
-      case e: IOException =>
-        error("Failed to access to /$index/$estype/_search", e)
-        Nil
-    } finally {
-      restClient.close()
+      case e: ElasticsearchException =>
+        error(e.getMessage)
+        Seq[AccessKey]()
     }
   }
 
   def update(accessKey: AccessKey): Unit = {
-    val id = accessKey.key
-    val restClient = client.open()
     try {
-      val entity = new NStringEntity(write(accessKey), ContentType.APPLICATION_JSON)
-      val response = restClient.performRequest(
-        "POST",
-        s"/$index/$estype/$id",
-        Map.empty[String, String].asJava,
-        entity)
-      val jsonResponse = parse(EntityUtils.toString(response.getEntity))
-      val result = (jsonResponse \ "result").extract[String]
-      result match {
-        case "created" =>
-        case "updated" =>
-        case _ =>
-          error(s"[$result] Failed to update $index/$estype/$id")
-      }
+      client.prepareIndex(index, estype, accessKey.key).setSource(write(accessKey)).get()
     } catch {
-      case e: IOException =>
-        error(s"Failed to update $index/$estype/$id", e)
-    } finally {
-      restClient.close()
+      case e: ElasticsearchException =>
+        error(e.getMessage)
     }
   }
 
-  def delete(id: String): Unit = {
-    val restClient = client.open()
+  def delete(key: String): Unit = {
     try {
-      val response = restClient.performRequest(
-        "DELETE",
-        s"/$index/$estype/$id",
-        Map.empty[String, String].asJava)
-      val json = parse(EntityUtils.toString(response.getEntity))
-      val result = (json \ "result").extract[String]
-      result match {
-        case "deleted" =>
-        case _ =>
-          error(s"[$result] Failed to update $index/$estype/id")
-      }
+      client.prepareDelete(index, estype, key).get
     } catch {
-      case e: IOException =>
-        error(s"Failed to update $index/$estype/id", e)
-    } finally {
-      restClient.close()
+      case e: ElasticsearchException =>
+        error(e.getMessage)
     }
   }
 }

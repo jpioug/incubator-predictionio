@@ -24,6 +24,7 @@ import org.apache.predictionio.data.store.{Common, LEventStore, PEventStore}
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.joda.time.DateTime
+import org.json4s._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
@@ -74,13 +75,12 @@ trait SelfCleaningDataSource {
     */
   @DeveloperApi
   def getCleanedPEvents(pEvents: RDD[Event]): RDD[Event] = {
-
     eventWindow
       .flatMap(_.duration)
       .map { duration =>
         val fd = Duration(duration)
         pEvents.filter(e =>
-          e.eventTime.isAfter(DateTime.now().minus(fd.toMillis))
+          e.eventTime.isAfter(DateTime.now().minus(fd.toMillis)) || isSetEvent(e)
         )
       }.getOrElse(pEvents)
   }
@@ -99,7 +99,7 @@ trait SelfCleaningDataSource {
       .map { duration =>
         val fd = Duration(duration)
         lEvents.filter(e =>
-          e.eventTime.isAfter(DateTime.now().minus(fd.toMillis))
+          e.eventTime.isAfter(DateTime.now().minus(fd.toMillis)) || isSetEvent(e)
         )
       }.getOrElse(lEvents).toIterable
   }
@@ -229,7 +229,7 @@ trait SelfCleaningDataSource {
     */
   @DeveloperApi
   def cleanPEvents(sc: SparkContext): RDD[Event] = {
-    val pEvents = PEventStore.find(appName)(sc).sortBy(_.eventTime)
+    val pEvents = PEventStore.find(appName)(sc).sortBy(_.eventTime, false)
 
     val rdd = eventWindow match {
       case Some(ew) =>
@@ -274,7 +274,7 @@ trait SelfCleaningDataSource {
     */
   @DeveloperApi
   def cleanLEvents(): Iterable[Event] = {
-    val lEvents = LEventStore.find(appName).toList.sortBy(_.eventTime)
+    val lEvents = LEventStore.find(appName).toList.sortBy(_.eventTime).reverse
 
     val events = eventWindow match {
       case Some(ew) =>
@@ -300,22 +300,35 @@ trait SelfCleaningDataSource {
         events.reduce { (e1, e2) =>
           val props = e2.event match {
             case "$set" =>
-              e1.properties.fields ++ e2.properties.fields
+              e1.properties.fields ++ e2.properties.fields.map(concatJArrays(_,e1))
             case "$unset" =>
               e1.properties.fields
                 .filterKeys(f => !e2.properties.fields.contains(f))
           }
-          e1.copy(properties = DataMap(props))
+          e1.copy(properties = DataMap(props), eventTime = e2.eventTime)
         }
 
       case None =>
         events.reduce { (e1, e2) =>
           e1.copy(properties =
-            DataMap(e1.properties.fields ++ e2.properties.fields)
+            DataMap(e1.properties.fields ++ e2.properties.fields),
+            eventTime = e2.eventTime
           )
         }
     }
   }
+
+  private def concatJArrays(propAndEvent: (String, JValue), e1: Event): (String,JValue) =
+    propAndEvent match {
+      case (k,v) => k -> (v match {
+        case jArr: JArray =>
+          (JArray((jArr.arr ++ (e1.properties.fields.getOrElse(k,JNothing) match {
+            case jArr2: JArray => jArr2.arr
+            case _ => List()
+          })).distinct))
+        case _ => v
+      })
+    }
 }
 
 case class EventWindow(

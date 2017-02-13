@@ -15,65 +15,50 @@
  * limitations under the License.
  */
 
+
 package org.apache.predictionio.data.storage.elasticsearch
 
-import java.io.IOException
-
-import scala.collection.JavaConverters._
-
-import org.apache.http.Header
-import org.apache.http.entity.ContentType
-import org.apache.http.nio.entity.NStringEntity
-import org.apache.http.util.EntityUtils
-import org.apache.predictionio.data.storage.StorageClientConfig
-import org.apache.predictionio.data.storage.StorageClientException
-import org.elasticsearch.client.RestClient
-import org.json4s._
-import org.json4s.JsonDSL._
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization.write
-
 import grizzled.slf4j.Logging
+import org.apache.predictionio.data.storage.StorageClientConfig
+import org.elasticsearch.ElasticsearchException
+import org.elasticsearch.client.Client
+import org.json4s.JsonDSL._
+import org.json4s._
+import org.json4s.native.JsonMethods._
 
-class ESSequences(client: ESClient, config: StorageClientConfig, index: String) extends Logging {
+class ESSequences(client: Client, config: StorageClientConfig, index: String) extends Logging {
   implicit val formats = DefaultFormats
   private val estype = "sequences"
 
-  val restClient = client.open()
-  try {
-    ESUtils.createIndex(restClient, index)
+  val indices = client.admin.indices
+  val indexExistResponse = indices.prepareExists(index).get
+  if (!indexExistResponse.isExists) {
+    // val settingsJson =
+    //   ("number_of_shards" -> 1) ~
+    //   ("auto_expand_replicas" -> "0-all")
+    indices.prepareCreate(index).get
+  }
+  val typeExistResponse = indices.prepareTypesExists(index).setTypes(estype).get
+  if (!typeExistResponse.isExists) {
     val mappingJson =
       (estype ->
-        ("_all" -> ("enabled" -> 0)))
-    ESUtils.createMapping(restClient, index, estype, compact(render(mappingJson)))
-  } finally {
-    restClient.close()
+        ("_source" -> ("enabled" -> 0)) ~
+        ("_all" -> ("enabled" -> 0)) ~
+        ("_type" -> ("index" -> "no")) ~
+        ("enabled" -> 0))
+    indices.preparePutMapping(index).setType(estype).
+      setSource(compact(render(mappingJson))).get
   }
 
   def genNext(name: String): Int = {
-    val restClient = client.open()
     try {
-      val entity = new NStringEntity(write("n" -> name), ContentType.APPLICATION_JSON)
-      val response = restClient.performRequest(
-        "POST",
-        s"/$index/$estype/$name",
-        Map.empty[String, String].asJava,
-        entity)
-      val jsonResponse = parse(EntityUtils.toString(response.getEntity))
-      val result = (jsonResponse \ "result").extract[String]
-      result match {
-        case "created" =>
-          (jsonResponse \ "_version").extract[Int]
-        case "updated" =>
-          (jsonResponse \ "_version").extract[Int]
-        case _ =>
-          throw new IllegalStateException(s"[$result] Failed to update $index/$estype/$name")
-      }
+      val response = client.prepareIndex(index, estype, name).
+        setSource(compact(render("n" -> name))).get
+      response.getVersion().toInt
     } catch {
-      case e: IOException =>
-        throw new StorageClientException(s"Failed to update $index/$estype/$name", e)
-    } finally {
-      restClient.close()
+      case e: ElasticsearchException =>
+        error(e.getMessage)
+        0
     }
   }
 }
