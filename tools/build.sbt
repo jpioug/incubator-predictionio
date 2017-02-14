@@ -70,8 +70,8 @@ assemblyShadeRules in assembly := Seq(
 test in assembly := {}
 
 outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile /
-  "assembly" / ("pio-assembly-" + version.value + ".jar")
+  "assembly" / "src" / "universal" / "lib" / ("pio-assembly-" + version.value + ".jar")
 
-cleanFiles <+= baseDirectory { base => base.getParentFile / "assembly" }
+cleanFiles <+= baseDirectory { base => base.getParentFile / "assembly" / "src" / "universal" / "lib" }
 
 pomExtra := childrenPomExtra.value

@@ -12,7 +12,6 @@ core/data
 examples/data/ml-*
 fs/
 supervisord.conf
-assembly/
 /dist
 pio.log
 *.tar.gz

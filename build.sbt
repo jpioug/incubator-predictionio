@@ -89,6 +89,9 @@ val e2 = (project in file("e2")).
   settings(genjavadocSettings: _*).
   settings(unmanagedClasspath in Test += conf)
 
+val assembly = (project in file("assembly")).
+  settings(commonSettings: _*)
+
 val root = (project in file(".")).
   settings(commonSettings: _*).
   // settings(scalaJavaUnidocSettings: _*).
