@@ -76,7 +76,7 @@ object Runner extends EitherLogging {
     (fs, uri) match {
       case (Some(f), Some(u)) =>
         f.close()
-      case _ => Unit
+      case _ => ()
     }
   }
 
@@ -117,7 +117,7 @@ object Runner extends EitherLogging {
       case (_, "cluster", m) if m.startsWith("spark://") =>
         return logAndFail(
           "Using cluster deploy mode with Spark standalone cluster is not supported")
-      case _ => Unit
+      case _ => ()
     }
 
     // Initialize HDFS API for scratch URI

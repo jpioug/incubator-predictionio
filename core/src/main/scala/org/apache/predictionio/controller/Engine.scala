@@ -222,7 +222,7 @@ class Engine[TD, EI, PD, Q, P, A](
 
       val models = algorithms.zip(persistedModels).map { case (algo, m) =>
         m match {
-          case Unit => algo.trainBase(sc, pd)
+          case () => algo.trainBase(sc, pd)
           case _ => m
         }
       }
