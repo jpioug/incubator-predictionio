@@ -24,7 +24,8 @@ clean_all() {
 }
 
 build() {
-  bash $BASE_DIR/make-distribution.sh
+#  bash $BASE_DIR/make-distribution.sh
+  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal e2/publishLocal tools/assembly assembly/universal:packageBin
 }
 
 replace_line() {
@@ -53,12 +54,18 @@ get_es_version() {
 }
 
 deploy_all() {
-  PIO_NAME=`ls PredictionIO-*.tar.gz | sed -e "s/.tar.gz//"`
-  if [ ! -e "$BASE_DIR/${PIO_NAME}.tar.gz" ] ; then
-    echo "$BASE_DIR/${PIO_NAME}.tar.gz does not exist."
+#  PIO_NAME=`ls PredictionIO-*.tar.gz | sed -e "s/.tar.gz//"`
+#  if [ ! -e "$BASE_DIR/${PIO_NAME}.tar.gz" ] ; then
+#    echo "$BASE_DIR/${PIO_NAME}.tar.gz does not exist."
+#    exit 1
+#  fi
+#  tar zxvf ${PIO_NAME}.tar.gz
+  PIO_NAME=`basename $BASE_DIR/assembly/target/universal/apache-predictionio-*.zip | sed -e "s/.zip//"`
+  if [ ! -e "$BASE_DIR/assembly/target/universal/${PIO_NAME}.zip" ] ; then
+    echo "${PIO_NAME}.zip does not exist."
     exit 1
   fi
-  tar zxvf ${PIO_NAME}.tar.gz
+  unzip $BASE_DIR/assembly/target/universal/${PIO_NAME}.zip
   mv $PIO_NAME $PIO_BIN_DIR
 
   mkdir $PIO_BIN_DIR/vendors
