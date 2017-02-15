@@ -17,7 +17,7 @@
 
 import NativePackagerHelper._
 
-enablePlugins(JavaServerAppPackaging)
+enablePlugins(UniversalPlugin)
 
 name := "apache-predictionio"
 
@@ -30,3 +30,22 @@ rpmVendor := "apache"
 rpmUrl := Some("http://predictionio.incubator.apache.org/")
 rpmLicense := Some("Apache License Version 2.0")
 
+mappings in Universal ++= {
+  val releaseFile = baseDirectory.value / ".." / "RELEASE.md"
+  val envFile = baseDirectory.value / "src" / "universal" / "conf" / "pio-env.sh.template"
+  val buildPropFile = baseDirectory.value / ".." / "project" / "build.properties"
+  val sbtFile = baseDirectory.value / ".." / "sbt" / "sbt"
+  val sbtLaunchLibFile = baseDirectory.value / ".." / "sbt" / "sbt-launch-lib.bash"
+  Seq(releaseFile -> "RELEASE",
+      envFile -> "conf/pio-env.sh",
+      buildPropFile -> "project/build.properties",
+      sbtFile -> "sbt/sbt",
+      sbtLaunchLibFile -> "sbt/sbt-launch-lib.bash")
+}
+
+mappings in Universal := {
+  val universalMappings = (mappings in Universal).value
+  universalMappings filter {
+    case (file, name) => !name.endsWith(".template") && !name.endsWith(".travis")
+  }
+}
