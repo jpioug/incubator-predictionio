@@ -34,7 +34,7 @@ fork in (ThisBuild, run) := true
 javacOptions in (ThisBuild, compile) ++= Seq("-source", "1.7", "-target", "1.7",
   "-Xlint:deprecation", "-Xlint:unchecked")
 
-elasticsearch5Version in ThisBuild := "5.2.0"
+elasticsearch5Version in ThisBuild := "5.2.1"
 
 elasticsearchVersion in ThisBuild := "1.7.6"
 

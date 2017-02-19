@@ -5,7 +5,7 @@ cd `dirname $0`
 BASE_DIR=`pwd`
 SPARK_FILE=spark-1.6.3-bin-hadoop2.6.tgz
 #ES_FILE=elasticsearch-1.7.6.tar.gz
-ES_FILE=elasticsearch-5.2.0.tar.gz
+ES_FILE=elasticsearch-5.2.1.tar.gz
 PIO_BIN_DIR=$BASE_DIR/PredictionIO-bin
 TEMPLATE_DIR=$BASE_DIR/template
 PATH=$PATH:$BASE_DIR/PredictionIO-bin/bin
