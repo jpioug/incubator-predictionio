@@ -35,12 +35,10 @@ mappings in Universal ++= {
   val envFile = baseDirectory.value / "src" / "universal" / "conf" / "pio-env.sh.template"
   val buildPropFile = baseDirectory.value / ".." / "project" / "build.properties"
   val sbtFile = baseDirectory.value / ".." / "sbt" / "sbt"
-  val sbtLaunchLibFile = baseDirectory.value / ".." / "sbt" / "sbt-launch-lib.bash"
   Seq(releaseFile -> "RELEASE",
       envFile -> "conf/pio-env.sh",
       buildPropFile -> "project/build.properties",
-      sbtFile -> "sbt/sbt",
-      sbtLaunchLibFile -> "sbt/sbt-launch-lib.bash")
+      sbtFile -> "sbt/sbt")
 }
 
 mappings in Universal := {

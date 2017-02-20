@@ -1,5 +1,5 @@
 #!/bin/bash
-#
+
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,9 +14,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
 set -e
-/wait-for-postgres.sh postgres /bin/true
-export PYTHONPATH=/$PIO_HOME/tests:$PYTHONPATH
-eval $@
+
+host="$1"
+shift
+cmd="$@"
+
+until psql -h "$host" -U "pio" -c '\l'; do
+  >&2 echo "Postgres is unavailable - sleeping"
+  sleep 1
+done
+
+>&2 echo "Postgres is up - executing command"
+exec $cmd

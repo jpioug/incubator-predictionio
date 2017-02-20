@@ -42,7 +42,6 @@ cp ${FWDIR}/assembly/src/universal/bin/* ${DISTDIR}/bin || :
 cp ${FWDIR}/assembly/src/universal/conf/* ${DISTDIR}/conf
 cp ${FWDIR}/project/build.properties ${DISTDIR}/project
 cp ${FWDIR}/sbt/sbt ${DISTDIR}/sbt
-cp ${FWDIR}/sbt/sbt-launch-lib.bash ${DISTDIR}/sbt
 cp ${FWDIR}/assembly/src/universal/lib/*assembly*jar ${DISTDIR}/lib
 
 rm -f ${DISTDIR}/lib/*javadoc.jar

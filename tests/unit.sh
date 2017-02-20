@@ -14,9 +14,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
-set -e
-/wait-for-postgres.sh postgres /bin/true
-export PYTHONPATH=/$PIO_HOME/tests:$PYTHONPATH
-eval $@
+# Run license check
+pushd /PredictionIO
+
+./tests/check_license.sh
+
+# Prepare pio environment variables
+set -a
+source conf/pio-env.sh
+set +a
+
+# Run stylecheck
+sbt/sbt scalastyle
+# Run all unit tests
+sbt/sbt test
+
+popd

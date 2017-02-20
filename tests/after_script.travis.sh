@@ -16,8 +16,4 @@
 # limitations under the License.
 #
 
-set -e
-
-if [[ $BUILD_TYPE == Unit ]]; then
-  ./bin/travis/pio-stop-travis
-fi
+docker-compose -f tests/docker-compose.yml down

@@ -1,4 +1,3 @@
-#!/bin/bash
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -16,7 +15,14 @@
 # limitations under the License.
 #
 
-set -e
-/wait-for-postgres.sh postgres /bin/true
-export PYTHONPATH=/$PIO_HOME/tests:$PYTHONPATH
-eval $@
+# WARNING: THIS DOCKERFILE IS NOT INTENDED FOR PRODUCTION USE OR DEPLOYMENT. AT
+#          THIS POINT, THIS IS ONLY INTENDED FOR USE IN AUTOMATED TESTS. IF YOU
+#          ARE LOOKING TO DEPLOY PREDICTIONIO WITH DOCKER, PLEASE REFER TO
+#          http://predictionio.incubator.apache.org/community/projects/#docker-installation-for-predictionio
+
+FROM predictionio/pio-testing-base
+
+# Include the entire code tree
+ENV PIO_HOME /PredictionIO
+ENV PATH ${PIO_HOME}/bin/:${PATH}
+ADD . ${PIO_HOME}
