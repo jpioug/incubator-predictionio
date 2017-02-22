@@ -25,7 +25,7 @@ clean_all() {
 
 build() {
 #  bash $BASE_DIR/make-distribution.sh
-  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal e2/publishLocal tools/assembly assembly/universal:packageBin
+  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
 }
 
 replace_line() {
@@ -86,11 +86,7 @@ deploy_all() {
   tar zxvfC $BASE_DIR/$ES_FILE $PIO_BIN_DIR/vendors > /dev/null
 
 
-  if [ $ES_VERSION = 1 ] ; then
-    ES_NAME=ELASTICSEARCH
-  else
-    ES_NAME=ELASTICSEARCH5
-  fi
+  ES_NAME=ELASTICSEARCH
   PIO_ENV_FILE=$PIO_BIN_DIR/conf/pio-env.sh
   replace_line "s/# PIO_STORAGE_SOURCES_${ES_NAME}_/PIO_STORAGE_SOURCES_${ES_NAME}_/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=${ES_NAME}/" $PIO_ENV_FILE
@@ -160,10 +156,14 @@ build_template() {
 }
 
 train_template() {
+  cd $TEMPLATE_DIR
+  cd incubator-predictionio-template-recommender
   pio train
 }
 
 deploy_template() {
+  cd $TEMPLATE_DIR
+  cd incubator-predictionio-template-recommender
   pio deploy &
   sleep 15
   curl -s -H "Content-Type: application/json" -d '{ "user": "1", "num": 4 }' http://localhost:8000/queries.json
