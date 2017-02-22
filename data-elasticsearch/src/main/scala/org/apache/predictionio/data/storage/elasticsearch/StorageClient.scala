@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.predictionio.data.storage.elasticsearch5
+package org.apache.predictionio.data.storage.elasticsearch
 
 import org.apache.http.HttpHost
 import org.apache.predictionio.data.storage.BaseStorageClient

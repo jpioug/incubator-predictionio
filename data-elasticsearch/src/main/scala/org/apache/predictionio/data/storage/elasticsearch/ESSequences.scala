@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.predictionio.data.storage.elasticsearch5
+package org.apache.predictionio.data.storage.elasticsearch
 
 import java.io.IOException
 

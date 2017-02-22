@@ -102,6 +102,13 @@ object Common extends EitherLogging {
     if (targetFiles.size > 0) targetFiles else libFiles
   }
 
+  def jarFilesForPlugin(pioHome: String): Array[File] = {
+    def jarFilesAt(path: File): Array[File] = path.listFiles filter {
+      _.getName.toLowerCase.endsWith(".jar")
+    }
+    jarFilesAt(new File(pioHome, "plugins"))
+  }
+
   def coreAssembly(pioHome: String): Expected[File] = {
     val core = s"pio-assembly-${BuildInfo.version}.jar"
     val coreDir =

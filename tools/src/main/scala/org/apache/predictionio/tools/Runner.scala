@@ -163,10 +163,13 @@ object Runner extends EitherLogging {
     val sparkSubmitCommand =
       Seq(Seq(sparkHome, "bin", "spark-submit").mkString(File.separator))
 
-    val sparkSubmitJars = if (extraJars.nonEmpty) {
-      Seq("--jars", deployedJars.map(_.toString).mkString(","))
-    } else {
-      Nil
+    val sparkSubmitJars = {
+      val jarFiles = Common.jarFilesForPlugin(pioHome).map(_.getCanonicalPath) ++ deployedJars.map(_.toString)
+      if (jarFiles.nonEmpty) {
+        Seq("--jars", jarFiles.mkString(","))
+      } else {
+        Nil
+      }
     }
 
     val sparkSubmitFiles = if (extraFiles.nonEmpty) {

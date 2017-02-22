@@ -34,10 +34,6 @@ fork in (ThisBuild, run) := true
 javacOptions in (ThisBuild, compile) ++= Seq("-source", "1.7", "-target", "1.7",
   "-Xlint:deprecation", "-Xlint:unchecked")
 
-elasticsearch5Version in ThisBuild := "5.2.1"
-
-elasticsearchVersion in ThisBuild := "1.7.6"
-
 json4sVersion in ThisBuild := "3.2.10"
 
 sparkVersion in ThisBuild := "1.6.3"
@@ -64,6 +60,14 @@ val common = (project in file("common")).
 
 val data = (project in file("data")).
   dependsOn(common).
+  settings(commonSettings: _*).
+  settings(genjavadocSettings: _*)
+
+val dataElasticsearch1 = (project in file("data-elasticsearch1")).
+  settings(commonSettings: _*).
+  settings(genjavadocSettings: _*)
+
+val dataElasticsearch = (project in file("data-elasticsearch")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 

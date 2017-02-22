@@ -15,18 +15,20 @@
  * limitations under the License.
  */
 
-package org.apache.predictionio.data.storage.elasticsearch5
+package org.apache.predictionio.data.storage.elasticsearch
 
 import java.io.IOException
 
-import scala.collection.JavaConverters.mapAsJavaMapConverter
+import scala.collection.JavaConverters._
 
 import org.apache.http.entity.ContentType
 import org.apache.http.nio.entity.NStringEntity
 import org.apache.http.util.EntityUtils
-import org.apache.predictionio.data.storage.App
-import org.apache.predictionio.data.storage.Apps
+import org.apache.predictionio.data.storage.EvaluationInstance
+import org.apache.predictionio.data.storage.EvaluationInstanceSerializer
+import org.apache.predictionio.data.storage.EvaluationInstances
 import org.apache.predictionio.data.storage.StorageClientConfig
+import org.apache.predictionio.data.storage.StorageClientException
 import org.elasticsearch.client.RestClient
 import org.json4s._
 import org.json4s.JsonDSL._
@@ -36,11 +38,10 @@ import org.json4s.native.Serialization.write
 import grizzled.slf4j.Logging
 import org.elasticsearch.client.ResponseException
 
-/** Elasticsearch implementation of Items. */
-class ESApps(client: ESClient, config: StorageClientConfig, index: String)
-    extends Apps with Logging {
-  implicit val formats = DefaultFormats.lossless
-  private val estype = "apps"
+class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index: String)
+    extends EvaluationInstances with Logging {
+  implicit val formats = DefaultFormats + new EvaluationInstanceSerializer
+  private val estype = "evaluation_instances"
   private val seq = new ESSequences(client, config, index)
 
   val restClient = client.open()
@@ -50,25 +51,34 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
       (estype ->
         ("_all" -> ("enabled" -> 0)) ~
         ("properties" ->
-          ("id" -> ("type" -> "keyword")) ~
-          ("name" -> ("type" -> "keyword"))))
+          ("status" -> ("type" -> "keyword")) ~
+          ("startTime" -> ("type" -> "date")) ~
+          ("endTime" -> ("type" -> "date")) ~
+          ("evaluationClass" -> ("type" -> "keyword")) ~
+          ("engineParamsGeneratorClass" -> ("type" -> "keyword")) ~
+          ("batch" -> ("type" -> "keyword")) ~
+          ("evaluatorResults" -> ("type" -> "text") ~ ("index" -> "no")) ~
+          ("evaluatorResultsHTML" -> ("type" -> "text") ~ ("index" -> "no")) ~
+          ("evaluatorResultsJSON" -> ("type" -> "text") ~ ("index" -> "no"))))
     ESUtils.createMapping(restClient, index, estype, compact(render(mappingJson)))
   } finally {
     restClient.close()
   }
 
-  def insert(app: App): Option[Int] = {
-    val id =
-      if (app.id == 0) {
-        var roll = seq.genNext(estype)
-        while (!get(roll).isEmpty) roll = seq.genNext(estype)
+  def insert(i: EvaluationInstance): String = {
+    val id = i.id match {
+      case x if x.isEmpty =>
+        var roll = seq.genNext(estype).toString
+        while (!get(roll).isEmpty) roll = seq.genNext(estype).toString
         roll
-      } else app.id
-    update(app.copy(id = id))
-    Some(id)
+      case x => x
+    }
+
+    update(i.copy(id = id))
+    id
   }
 
-  def get(id: Int): Option[App] = {
+  def get(id: String): Option[EvaluationInstance] = {
     val restClient = client.open()
     try {
       val response = restClient.performRequest(
@@ -78,7 +88,7 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
       val jsonResponse = parse(EntityUtils.toString(response.getEntity))
       (jsonResponse \ "found").extract[Boolean] match {
         case true =>
-          Some((jsonResponse \ "_source").extract[App])
+          Some((jsonResponse \ "_source").extract[EvaluationInstance])
         case _ =>
           None
       }
@@ -98,43 +108,13 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
     }
   }
 
-  def getByName(name: String): Option[App] = {
-    val restClient = client.open()
-    try {
-      val json =
-        ("query" ->
-          ("term" ->
-            ("name" -> name)))
-      val entity = new NStringEntity(compact(render(json)), ContentType.APPLICATION_JSON)
-      val response = restClient.performRequest(
-        "POST",
-        s"/$index/$estype/_search",
-        Map.empty[String, String].asJava,
-        entity)
-      val jsonResponse = parse(EntityUtils.toString(response.getEntity))
-      (jsonResponse \ "hits" \ "total").extract[Long] match {
-        case 0 => None
-        case _ =>
-          val results = (jsonResponse \ "hits" \ "hits").extract[Seq[JValue]]
-          val result = (results.head \ "_source").extract[App]
-          Some(result)
-      }
-    } catch {
-      case e: IOException =>
-        error(s"Failed to access to /$index/$estype/_search", e)
-        None
-    } finally {
-      restClient.close()
-    }
-  }
-
-  def getAll(): Seq[App] = {
+  def getAll(): Seq[EvaluationInstance] = {
     val restClient = client.open()
     try {
       val json =
         ("query" ->
           ("match_all" -> List.empty))
-      ESUtils.getAll[App](restClient, index, estype, compact(render(json)))
+      ESUtils.getAll[EvaluationInstance](restClient, index, estype, compact(render(json)))
     } catch {
       case e: IOException =>
         error("Failed to access to /$index/$estype/_search", e)
@@ -144,18 +124,38 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
     }
   }
 
-  def update(app: App): Unit = {
-    val id = app.id.toString
+  def getCompleted(): Seq[EvaluationInstance] = {
     val restClient = client.open()
     try {
-      val entity = new NStringEntity(write(app), ContentType.APPLICATION_JSON);
+      val json =
+        ("query" ->
+          ("term" ->
+            ("status" -> "EVALCOMPLETED"))) ~
+            ("sort" ->
+              ("startTime" ->
+                ("order" -> "desc")))
+      ESUtils.getAll[EvaluationInstance](restClient, index, estype, compact(render(json)))
+    } catch {
+      case e: IOException =>
+        error("Failed to access to /$index/$estype/_search", e)
+        Nil
+    } finally {
+      restClient.close()
+    }
+  }
+
+  def update(i: EvaluationInstance): Unit = {
+    val id = i.id
+    val restClient = client.open()
+    try {
+      val entity = new NStringEntity(write(i), ContentType.APPLICATION_JSON)
       val response = restClient.performRequest(
         "POST",
         s"/$index/$estype/$id",
         Map.empty[String, String].asJava,
         entity)
-      val jsonResponse = parse(EntityUtils.toString(response.getEntity))
-      val result = (jsonResponse \ "result").extract[String]
+      val json = parse(EntityUtils.toString(response.getEntity))
+      val result = (json \ "result").extract[String]
       result match {
         case "created" =>
         case "updated" =>
@@ -170,7 +170,7 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
     }
   }
 
-  def delete(id: Int): Unit = {
+  def delete(id: String): Unit = {
     val restClient = client.open()
     try {
       val response = restClient.performRequest(
@@ -186,7 +186,7 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
       }
     } catch {
       case e: IOException =>
-        error(s"Failed to update $index/$estype/id", e)
+        error(s"Failed to update $index/$estype/$id", e)
     } finally {
       restClient.close()
     }

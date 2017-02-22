@@ -15,20 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.predictionio.data.storage.elasticsearch5
+package org.apache.predictionio.data.storage.elasticsearch
 
 import java.io.IOException
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.mapAsJavaMapConverter
 
 import org.apache.http.entity.ContentType
 import org.apache.http.nio.entity.NStringEntity
 import org.apache.http.util.EntityUtils
-import org.apache.predictionio.data.storage.EvaluationInstance
-import org.apache.predictionio.data.storage.EvaluationInstanceSerializer
-import org.apache.predictionio.data.storage.EvaluationInstances
+import org.apache.predictionio.data.storage.EngineInstance
+import org.apache.predictionio.data.storage.EngineInstanceSerializer
+import org.apache.predictionio.data.storage.EngineInstances
 import org.apache.predictionio.data.storage.StorageClientConfig
-import org.apache.predictionio.data.storage.StorageClientException
 import org.elasticsearch.client.RestClient
 import org.json4s._
 import org.json4s.JsonDSL._
@@ -38,11 +37,10 @@ import org.json4s.native.Serialization.write
 import grizzled.slf4j.Logging
 import org.elasticsearch.client.ResponseException
 
-class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index: String)
-    extends EvaluationInstances with Logging {
-  implicit val formats = DefaultFormats + new EvaluationInstanceSerializer
-  private val estype = "evaluation_instances"
-  private val seq = new ESSequences(client, config, index)
+class ESEngineInstances(client: ESClient, config: StorageClientConfig, index: String)
+    extends EngineInstances with Logging {
+  implicit val formats = DefaultFormats + new EngineInstanceSerializer
+  private val estype = "engine_instances"
 
   val restClient = client.open()
   try {
@@ -54,23 +52,32 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
           ("status" -> ("type" -> "keyword")) ~
           ("startTime" -> ("type" -> "date")) ~
           ("endTime" -> ("type" -> "date")) ~
-          ("evaluationClass" -> ("type" -> "keyword")) ~
-          ("engineParamsGeneratorClass" -> ("type" -> "keyword")) ~
+          ("engineId" -> ("type" -> "keyword")) ~
+          ("engineVersion" -> ("type" -> "keyword")) ~
+          ("engineVariant" -> ("type" -> "keyword")) ~
+          ("engineFactory" -> ("type" -> "keyword")) ~
           ("batch" -> ("type" -> "keyword")) ~
-          ("evaluatorResults" -> ("type" -> "text") ~ ("index" -> "no")) ~
-          ("evaluatorResultsHTML" -> ("type" -> "text") ~ ("index" -> "no")) ~
-          ("evaluatorResultsJSON" -> ("type" -> "text") ~ ("index" -> "no"))))
+          ("dataSourceParams" -> ("type" -> "keyword")) ~
+          ("preparatorParams" -> ("type" -> "keyword")) ~
+          ("algorithmsParams" -> ("type" -> "keyword")) ~
+          ("servingParams" -> ("type" -> "keyword")) ~
+          ("status" -> ("type" -> "keyword"))))
     ESUtils.createMapping(restClient, index, estype, compact(render(mappingJson)))
   } finally {
     restClient.close()
   }
 
-  def insert(i: EvaluationInstance): String = {
+  def insert(i: EngineInstance): String = {
     val id = i.id match {
       case x if x.isEmpty =>
-        var roll = seq.genNext(estype).toString
-        while (!get(roll).isEmpty) roll = seq.genNext(estype).toString
-        roll
+        @scala.annotation.tailrec
+        def generateId(newId: Option[String]): String = {
+          newId match {
+            case Some(x) => x
+            case _ => generateId(preInsert())
+          }
+        }
+        generateId(preInsert())
       case x => x
     }
 
@@ -78,7 +85,34 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
     id
   }
 
-  def get(id: String): Option[EvaluationInstance] = {
+  def preInsert(): Option[String] = {
+    val restClient = client.open()
+    try {
+      val entity = new NStringEntity("{}", ContentType.APPLICATION_JSON)
+      val response = restClient.performRequest(
+        "POST",
+        s"/$index/$estype/",
+        Map.empty[String, String].asJava,
+        entity)
+      val jsonResponse = parse(EntityUtils.toString(response.getEntity))
+      val result = (jsonResponse \ "result").extract[String]
+      result match {
+        case "created" =>
+          Some((jsonResponse \ "_id").extract[String])
+        case _ =>
+          error(s"[$result] Failed to create $index/$estype")
+          None
+      }
+    } catch {
+      case e: IOException =>
+        error(s"Failed to create $index/$estype", e)
+        None
+    } finally {
+      restClient.close()
+    }
+  }
+
+  def get(id: String): Option[EngineInstance] = {
     val restClient = client.open()
     try {
       val response = restClient.performRequest(
@@ -88,7 +122,7 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
       val jsonResponse = parse(EntityUtils.toString(response.getEntity))
       (jsonResponse \ "found").extract[Boolean] match {
         case true =>
-          Some((jsonResponse \ "_source").extract[EvaluationInstance])
+          Some((jsonResponse \ "_source").extract[EngineInstance])
         case _ =>
           None
       }
@@ -108,13 +142,13 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
     }
   }
 
-  def getAll(): Seq[EvaluationInstance] = {
+  def getAll(): Seq[EngineInstance] = {
     val restClient = client.open()
     try {
       val json =
         ("query" ->
           ("match_all" -> List.empty))
-      ESUtils.getAll[EvaluationInstance](restClient, index, estype, compact(render(json)))
+      ESUtils.getAll[EngineInstance](restClient, index, estype, compact(render(json)))
     } catch {
       case e: IOException =>
         error("Failed to access to /$index/$estype/_search", e)
@@ -124,27 +158,47 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
     }
   }
 
-  def getCompleted(): Seq[EvaluationInstance] = {
+  def getCompleted(
+    engineId: String,
+    engineVersion: String,
+    engineVariant: String): Seq[EngineInstance] = {
     val restClient = client.open()
     try {
       val json =
         ("query" ->
-          ("term" ->
-            ("status" -> "EVALCOMPLETED"))) ~
-            ("sort" ->
-              ("startTime" ->
-                ("order" -> "desc")))
-      ESUtils.getAll[EvaluationInstance](restClient, index, estype, compact(render(json)))
+          ("bool" ->
+            ("must" -> List(
+              ("term" ->
+                ("status" -> "COMPLETED")),
+              ("term" ->
+                ("engineId" -> engineId)),
+              ("term" ->
+                ("engineVersion" -> engineVersion)),
+              ("term" ->
+                ("engineVariant" -> engineVariant)))))) ~
+              ("sort" -> List(
+                ("startTime" ->
+                  ("order" -> "desc"))))
+      ESUtils.getAll[EngineInstance](restClient, index, estype, compact(render(json)))
     } catch {
       case e: IOException =>
-        error("Failed to access to /$index/$estype/_search", e)
+        error(s"Failed to access to /$index/$estype/_search", e)
         Nil
     } finally {
       restClient.close()
     }
   }
 
-  def update(i: EvaluationInstance): Unit = {
+  def getLatestCompleted(
+    engineId: String,
+    engineVersion: String,
+    engineVariant: String): Option[EngineInstance] =
+    getCompleted(
+      engineId,
+      engineVersion,
+      engineVariant).headOption
+
+  def update(i: EngineInstance): Unit = {
     val id = i.id
     val restClient = client.open()
     try {
@@ -154,8 +208,8 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
         s"/$index/$estype/$id",
         Map.empty[String, String].asJava,
         entity)
-      val json = parse(EntityUtils.toString(response.getEntity))
-      val result = (json \ "result").extract[String]
+      val jsonResponse = parse(EntityUtils.toString(response.getEntity))
+      val result = (jsonResponse \ "result").extract[String]
       result match {
         case "created" =>
         case "updated" =>

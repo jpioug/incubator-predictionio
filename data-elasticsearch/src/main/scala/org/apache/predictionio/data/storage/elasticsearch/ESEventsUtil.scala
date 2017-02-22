@@ -16,7 +16,7 @@
  */
 
 
-package org.apache.predictionio.data.storage.elasticsearch5
+package org.apache.predictionio.data.storage.elasticsearch
 
 import org.apache.hadoop.io.DoubleWritable
 import org.apache.hadoop.io.LongWritable

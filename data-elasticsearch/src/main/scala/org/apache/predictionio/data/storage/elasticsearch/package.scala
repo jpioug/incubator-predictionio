@@ -22,4 +22,4 @@ package org.apache.predictionio.data.storage
   *
   * @group Implementation
   */
-package object elasticsearch5 {}
+package elasticsearch {}
