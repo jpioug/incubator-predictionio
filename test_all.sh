@@ -25,7 +25,11 @@ clean_all() {
 
 build() {
 #  bash $BASE_DIR/make-distribution.sh
-  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
+  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
+  if [ $? != 0 ] ; then
+    echo "Build Failed!"
+    exit 1
+  fi
 }
 
 replace_line() {
