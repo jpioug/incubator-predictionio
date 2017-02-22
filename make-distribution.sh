@@ -34,6 +34,8 @@ rm -rf ${DISTDIR}
 mkdir -p ${DISTDIR}/bin
 mkdir -p ${DISTDIR}/conf
 mkdir -p ${DISTDIR}/lib
+mkdir -p ${DISTDIR}/plugins
+mkdir -p ${DISTDIR}/extra
 mkdir -p ${DISTDIR}/project
 mkdir -p ${DISTDIR}/sbt
 mkdir -p ${DISTDIR}/log
@@ -43,6 +45,8 @@ cp ${FWDIR}/assembly/src/universal/conf/* ${DISTDIR}/conf
 cp ${FWDIR}/project/build.properties ${DISTDIR}/project
 cp ${FWDIR}/sbt/sbt ${DISTDIR}/sbt
 cp ${FWDIR}/assembly/src/universal/lib/*assembly*jar ${DISTDIR}/lib
+cp ${FWDIR}/assembly/src/universal/plugins/*jar ${DISTDIR}/plugins
+cp ${FWDIR}/assembly/src/universal/extra/*jar ${DISTDIR}/extra
 
 rm -f ${DISTDIR}/lib/*javadoc.jar
 rm -f ${DISTDIR}/lib/*sources.jar
