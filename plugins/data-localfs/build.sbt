@@ -15,16 +15,11 @@
  * limitations under the License.
  */
 
-name := "apache-predictionio-data-elasticsearch"
-
-elasticsearchVersion := "5.2.1"
+name := "apache-predictionio-data-localfs"
 
 libraryDependencies ++= Seq(
   "org.apache.predictionio" %% "apache-predictionio-core" % version.value % "provided",
   "org.apache.predictionio" %% "apache-predictionio-data" % version.value % "provided",
-  "org.elasticsearch.client" % "rest"           % elasticsearchVersion.value,
-  "org.elasticsearch"       %% "elasticsearch-spark-13" % elasticsearchVersion.value % "provided",
-  "org.elasticsearch"        % "elasticsearch-hadoop-mr" % elasticsearchVersion.value,
   "org.scalatest"           %% "scalatest"      % "2.1.7" % "test",
   "org.specs2"              %% "specs2"         % "2.3.13" % "test")
 
@@ -42,12 +37,8 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
-assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("org.apache.http.**" -> "shadeio.data.http.@1").inAll
-)
-
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile / "assembly" / "src" / "universal" / "plugins" / ("pio-data-elasticsearch-assembly-" + version.value + ".jar")
+outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "plugins" / ("pio-data-localfs-assembly-" + version.value + ".jar")
 

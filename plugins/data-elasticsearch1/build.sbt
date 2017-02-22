@@ -43,5 +43,5 @@ assemblyMergeStrategy in assembly := {
 // skip test in assembly
 test in assembly := {}
 
-// outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile / "assembly" / "src" / "universal" / "lib" / ("pio-data-elasticsearch1-assembly-" + version.value + ".jar")
+outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "extra" / ("pio-data-elasticsearch1-assembly-" + version.value + ".jar")
 
