@@ -193,6 +193,7 @@ object Runner extends EitherLogging {
     }
 
     val verboseArg = if (verbose) Seq("--verbose") else Nil
+    val pioLogDir = sys.env.getOrElse("pio.log.dir", s"${pioHome}/log")
 
     val sparkSubmit = Seq(
       sparkSubmitCommand,
@@ -202,7 +203,7 @@ object Runner extends EitherLogging {
       sparkSubmitFiles,
       sparkSubmitExtraClasspaths,
       sparkSubmitKryo,
-      Seq("--driver-java-options", s"-Dpio.home=${pioHome}"),
+      Seq("--driver-java-options", s"-Dpio.log.dir=${pioLogDir}"),
       Seq(mainJar),
       detectFilePaths(fs, sa.scratchUri, classArgs),
       Seq("--env", pioEnvVars),

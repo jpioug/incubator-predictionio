@@ -17,14 +17,15 @@
 
 import NativePackagerHelper._
 
-enablePlugins(UniversalPlugin)
+enablePlugins(RpmPlugin, DebianPlugin)
 
-name := "apache-predictionio"
+name := "predictionio"
 
 maintainer in Linux := "Apache Software Foundation"
 packageSummary in Linux := "Apache PredictionIO"
 packageDescription := "Apache PredictionIO is an open source Machine Learning Server built on top of state-of-the-art open source stack for developers and data scientists create predictive engines for any machine learning task."
 
+version in Rpm := version.value.replace("-", "~")
 rpmRelease := "1"
 rpmVendor := "apache"
 rpmUrl := Some("http://predictionio.incubator.apache.org/")
@@ -47,3 +48,29 @@ mappings in Universal := {
     case (file, name) => !name.endsWith(".template") && !name.endsWith(".travis")
   }
 }
+
+linuxPackageMappings += packageTemplateMapping(s"/var/log/${name.value}")() withUser(name.value) withGroup(name.value) //withPerms("775")
+
+linuxPackageMappings := {
+    val mappings = linuxPackageMappings.value
+    mappings map {  linuxPackage =>
+        val linuxFileMappings = linuxPackage.mappings map {
+            case (f, n) if f.getParent endsWith "conf" => f -> s"/etc/${name.value}/${f.getName}"
+            case (f, n) => f -> n
+        } filter {
+            case (f, n) if f.getName equals "conf" => false
+            case (f, n) => true
+        }
+
+        val fileData = linuxPackage.fileData.copy(
+            user = s"${name.value}",
+            group = s"${name.value}"
+        )
+
+        linuxPackage.copy(
+            mappings = linuxFileMappings,
+            fileData = fileData
+        )
+    }
+}
+

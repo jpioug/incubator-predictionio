@@ -300,6 +300,7 @@ object Engine extends EitherLogging {
     val jarPluginFiles = jarFilesForPlugin(pioHome)
     jarPluginFiles foreach { f => info(s"Found JAR: ${f.getName}") }
     val allJarFiles = jarFiles.map(_.getCanonicalPath) ++ jarPluginFiles.map(_.getCanonicalPath)
+    val pioLogDir = sys.env.getOrElse("pio.log.dir", s"${pioHome}/log")
 
     val cmd = s"${getSparkHome(sparkArgs.sparkHome)}/bin/spark-submit --jars " +
       s"${allJarFiles.mkString(",")} " +
@@ -308,7 +309,7 @@ object Engine extends EitherLogging {
       } else {
         ""
       }) +
-      "--driver-java-options -Dpio.home=${pioHome} " +
+      "--driver-java-options -Dpio.log.dir=${pioLogDir} " +
       "--class " +
       s"${mainClass} ${sparkArgs.sparkPassThrough.mkString(" ")} " +
       coreAssembly(pioHome) + " " +
