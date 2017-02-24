@@ -64,7 +64,7 @@ deploy_all() {
 #    exit 1
 #  fi
 #  tar zxvf ${PIO_NAME}.tar.gz
-  PIO_NAME=`basename $BASE_DIR/assembly/target/universal/apache-predictionio-*.zip | sed -e "s/.zip//"`
+  PIO_NAME=`basename $BASE_DIR/assembly/target/universal/*.zip | sed -e "s/.zip//"`
   if [ ! -e "$BASE_DIR/assembly/target/universal/${PIO_NAME}.zip" ] ; then
     echo "${PIO_NAME}.zip does not exist."
     exit 1
