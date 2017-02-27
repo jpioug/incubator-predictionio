@@ -43,5 +43,5 @@ assemblyMergeStrategy in assembly := {
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "plugins" / ("pio-data-jdbc-assembly-" + version.value + ".jar")
+outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / "spark" / ("pio-data-jdbc-assembly-" + version.value + ".jar")
 

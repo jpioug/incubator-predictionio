@@ -63,27 +63,27 @@ val data = (project in file("data")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 
-val dataElasticsearch1 = (project in file("plugins/data-elasticsearch1")).
+val dataElasticsearch1 = (project in file("storage/elasticsearch1")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 
-val dataElasticsearch = (project in file("plugins/data-elasticsearch")).
+val dataElasticsearch = (project in file("storage/elasticsearch")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 
-val dataHbase = (project in file("plugins/data-hbase")).
+val dataHbase = (project in file("storage/hbase")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 
-val dataHdfs = (project in file("plugins/data-hdfs")).
+val dataHdfs = (project in file("storage/hdfs")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 
-val dataJdbc = (project in file("plugins/data-jdbc")).
+val dataJdbc = (project in file("storage/jdbc")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 
-val dataLocalfs = (project in file("plugins/data-localfs")).
+val dataLocalfs = (project in file("storage/localfs")).
   settings(commonSettings: _*).
   settings(genjavadocSettings: _*)
 

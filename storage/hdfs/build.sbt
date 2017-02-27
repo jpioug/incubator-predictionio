@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-name := "apache-predictionio-data-localfs"
+name := "apache-predictionio-data-hdfs"
 
 libraryDependencies ++= Seq(
   "org.apache.predictionio" %% "apache-predictionio-core" % version.value % "provided",
@@ -40,5 +40,5 @@ assemblyMergeStrategy in assembly := {
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "plugins" / ("pio-data-localfs-assembly-" + version.value + ".jar")
+outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / "spark" / ("pio-data-hdfs-assembly-" + version.value + ".jar")
 

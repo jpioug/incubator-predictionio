@@ -297,7 +297,7 @@ object Engine extends EitherLogging {
     val extraFiles = WorkflowUtils.thirdPartyConfFiles
     val jarFiles = jarFilesForScala(engineDirPath)
     jarFiles foreach { f => info(s"Found JAR: ${f.getName}") }
-    val jarPluginFiles = jarFilesForPlugin(pioHome)
+    val jarPluginFiles = jarFilesForSpark(pioHome)
     jarPluginFiles foreach { f => info(s"Found JAR: ${f.getName}") }
     val allJarFiles = jarFiles.map(_.getCanonicalPath) ++ jarPluginFiles.map(_.getCanonicalPath)
     val pioLogDir = sys.env.getOrElse("pio.log.dir", s"${pioHome}/log")

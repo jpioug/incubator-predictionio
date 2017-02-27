@@ -15,23 +15,11 @@
  * limitations under the License.
  */
 
-name := "apache-predictionio-data-hbase"
+name := "apache-predictionio-data-localfs"
 
 libraryDependencies ++= Seq(
   "org.apache.predictionio" %% "apache-predictionio-core" % version.value % "provided",
   "org.apache.predictionio" %% "apache-predictionio-data" % version.value % "provided",
-  "org.apache.spark"        %% "spark-core"     % sparkVersion.value % "provided",
-  "org.apache.hbase"         % "hbase-common"   % "0.98.5-hadoop2",
-  "org.apache.hbase"         % "hbase-client"   % "0.98.5-hadoop2"
-    exclude("org.apache.zookeeper", "zookeeper"),
-  // added for Parallel storage interface
-  "org.apache.hbase"         % "hbase-server"   % "0.98.5-hadoop2"
-    exclude("org.apache.hbase", "hbase-client")
-    exclude("org.apache.zookeeper", "zookeeper")
-    exclude("javax.servlet", "servlet-api")
-    exclude("org.mortbay.jetty", "servlet-api-2.5")
-    exclude("org.mortbay.jetty", "jsp-api-2.1")
-    exclude("org.mortbay.jetty", "jsp-2.1"),
   "org.scalatest"           %% "scalatest"      % "2.1.7" % "test",
   "org.specs2"              %% "specs2"         % "2.3.13" % "test")
 
@@ -52,5 +40,5 @@ assemblyMergeStrategy in assembly := {
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "plugins" / ("pio-data-hbase-assembly-" + version.value + ".jar")
+outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / "spark" / ("pio-data-localfs-assembly-" + version.value + ".jar")
 
