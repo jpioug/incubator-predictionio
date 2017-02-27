@@ -15,18 +15,15 @@
  * limitations under the License.
  */
 
-
 package org.apache.predictionio.tools
 
 import java.io.File
 import java.net.URI
 
-import org.apache.predictionio.tools.console.ConsoleArgs
-import org.apache.predictionio.workflow.WorkflowUtils
-import org.apache.predictionio.tools.ReturnTypes._
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.predictionio.tools.ReturnTypes._
+import org.apache.predictionio.workflow.WorkflowUtils
 
 import scala.sys.process._
 
@@ -163,13 +160,11 @@ object Runner extends EitherLogging {
     val sparkSubmitCommand =
       Seq(Seq(sparkHome, "bin", "spark-submit").mkString(File.separator))
 
-    val sparkSubmitJars = {
-      val jarFiles = Common.jarFilesForSpark(pioHome).map(_.getCanonicalPath) ++ deployedJars.map(_.toString)
-      if (jarFiles.nonEmpty) {
-        Seq("--jars", jarFiles.mkString(","))
-      } else {
-        Nil
-      }
+    val sparkSubmitJarsList = Common.jarFilesForSpark(pioHome).map(_.toURI) ++ WorkflowUtils.thirdPartyJars ++ deployedJars
+    val sparkSubmitJars = if (sparkSubmitJarsList.nonEmpty) {
+      Seq("--jars", sparkSubmitJarsList.map(_.toString).mkString(","))
+    } else {
+      Nil
     }
 
     val sparkSubmitFiles = if (extraFiles.nonEmpty) {
