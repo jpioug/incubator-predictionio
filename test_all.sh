@@ -8,6 +8,7 @@ SPARK_FILE=spark-1.6.3-bin-hadoop2.6.tgz
 ES_FILE=elasticsearch-5.2.1.tar.gz
 PIO_BIN_DIR=$BASE_DIR/PredictionIO-bin
 TEMPLATE_DIR=$BASE_DIR/template
+TEMPLATE_NAME=incubator-predictionio-template-recommender
 PATH=$PATH:$BASE_DIR/PredictionIO-bin/bin
 
 stop_all() {
@@ -110,10 +111,11 @@ start_all() {
 }
 
 build_template() {
+  mkdir -p $TEMPLATE_DIR
   cd $TEMPLATE_DIR
-  rm -rf incubator-predictionio-template-recommender
-  git clone https://github.com/jpioug/incubator-predictionio-template-recommender.git
-  cd incubator-predictionio-template-recommender
+  rm -rf $TEMPLATE_NAME
+  git clone https://github.com/jpioug/$TEMPLATE_NAME.git
+  cd $TEMPLATE_NAME
 
   pio app new MyApp1
   pio app list
@@ -160,14 +162,12 @@ build_template() {
 }
 
 train_template() {
-  cd $TEMPLATE_DIR
-  cd incubator-predictionio-template-recommender
+  cd $TEMPLATE_DIR/$TEMPLATE_NAME
   pio train
 }
 
 deploy_template() {
-  cd $TEMPLATE_DIR
-  cd incubator-predictionio-template-recommender
+  cd $TEMPLATE_DIR/$TEMPLATE_NAME
   pio deploy &
   sleep 15
   curl -s -H "Content-Type: application/json" -d '{ "user": "1", "num": 4 }' http://localhost:8000/queries.json
