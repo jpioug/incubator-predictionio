@@ -45,7 +45,7 @@ mappings in Universal ++= {
 mappings in Universal := {
   val universalMappings = (mappings in Universal).value
   universalMappings filter {
-    case (file, name) => !name.endsWith(".template") && !name.endsWith(".travis")
+    case (file, name) => !name.endsWith(".template") && !name.endsWith("travis")
   }
 }
 
