@@ -55,6 +55,7 @@ linuxPackageMappings := {
     val mappings = linuxPackageMappings.value
     mappings map {  linuxPackage =>
         val linuxFileMappings = linuxPackage.mappings map {
+            case (f, n) if f.getName equals "pio-env.sh.template" => f -> s"/etc/${name.value}/pio-env.sh"
             case (f, n) if f.getParent endsWith "conf" => f -> s"/etc/${name.value}/${f.getName}"
             case (f, n) => f -> n
         } filter {
