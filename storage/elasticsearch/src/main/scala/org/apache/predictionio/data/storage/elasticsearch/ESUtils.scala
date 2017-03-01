@@ -144,7 +144,7 @@ object ESUtils {
     val sortOrder = reversed.map(x => x match {
       case true => "desc"
       case _ => "asc"
-    })
+    }).getOrElse("asc")
     s"""{
        |"query":{"bool":{"must":[${mustQueries}]}},
        |"sort":[{"eventTime":{"order":"${sortOrder}"}}]

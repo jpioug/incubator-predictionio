@@ -18,19 +18,19 @@
 
 USAGE=$"Usage: run_docker <meta> <event> <model> <command>
   Where:
-    meta         = [PGSQL,ELASTICSEARCH,ELASTICSEARCH1]
-    event        = [PGSQL,HBASE]
+    meta         = [PGSQL,ELASTICSEARCH]
+    event        = [PGSQL,HBASE,ELASTICSEARCH]
     model        = [PGSQL,LOCALFS,HDFS]
     command      = command to run in the container"
 
-if ! [[ "$1" =~ ^(PGSQL|ELASTICSEARCH|ELASTICSEARCH1)$ ]]; then
+if ! [[ "$1" =~ ^(PGSQL|ELASTICSEARCH)$ ]]; then
   echo "$USAGE"
   exit 1
 fi
 META="$1"
 shift
 
-if ! [[ "$1" =~ ^(PGSQL|HBASE)$ ]]; then
+if ! [[ "$1" =~ ^(PGSQL|HBASE|ELASTICSEARCH)$ ]]; then
   echo "$USAGE"
   exit 1
 fi
