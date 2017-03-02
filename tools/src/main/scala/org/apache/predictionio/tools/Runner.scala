@@ -188,7 +188,7 @@ object Runner extends EitherLogging {
     }
 
     val verboseArg = if (verbose) Seq("--verbose") else Nil
-    val pioLogDir = sys.env.getOrElse("pio.log.dir", s"${pioHome}/log")
+    val pioLogDir = Option(System.getProperty("pio.log.dir")).getOrElse(s"${pioHome}/log")
 
     val sparkSubmit = Seq(
       sparkSubmitCommand,
