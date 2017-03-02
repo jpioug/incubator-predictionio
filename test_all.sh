@@ -1,30 +1,40 @@
 #!/bin/bash
 
-cd `dirname $0`
+RUN_MODE=$1
 
-BASE_DIR=`pwd`
-SPARK_FILE=spark-1.6.3-bin-hadoop2.6.tgz
-#ES_FILE=elasticsearch-1.7.6.tar.gz
-ES_FILE=elasticsearch-5.2.1.tar.gz
-PIO_BIN_DIR=$BASE_DIR/PredictionIO-bin
-TEMPLATE_DIR=$BASE_DIR/template
-TEMPLATE_NAME=incubator-predictionio-template-recommender
-PATH=$PATH:$BASE_DIR/PredictionIO-bin/bin
+PYTHON_CMD=`which python3`
+if [ -z $PYTHON_CMD ] ; then
+  PYTHON_CMD=python
+fi
+
+PIP_CMD=`which pip3`
+if [ -z $PIP_CMD ] ; then
+  PIP_CMD=pip
+fi
 
 stop_all() {
-  if [ -f $PIO_BIN_DIR/bin/pio-stop-all ] ; then
-    $PIO_BIN_DIR/bin/pio-stop-all
+  if [ -f $PIO_HOME/bin/pio-stop-all ] ; then
+    echo "#"
+    echo "# Stop $PIO_HOME/bin/pio-stop-all"
+    echo "#"
+    $PIO_HOME/bin/pio-stop-all
   fi
 }
 
 clean_all() {
-  rm -rf $PIO_BIN_DIR
+  echo "#"
+  echo "# Clean up"
+  echo "#"
+  rm -rf $PIO_HOME
   rm -f PredictionIO-*.tar.gz
   $BASE_DIR/sbt/sbt clean
   rm -rf target $BASE_DIR/target
 }
 
 build() {
+  echo "#"
+  echo "# Build PredictionIO"
+  echo "#"
 #  bash $BASE_DIR/make-distribution.sh
   $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
   if [ $? != 0 ] ; then
@@ -59,6 +69,9 @@ get_es_version() {
 }
 
 deploy_all() {
+  echo "#"
+  echo "# Deploy PredictionIO"
+  echo "#"
 #  PIO_NAME=`ls PredictionIO-*.tar.gz | sed -e "s/.tar.gz//"`
 #  if [ ! -e "$BASE_DIR/${PIO_NAME}.tar.gz" ] ; then
 #    echo "$BASE_DIR/${PIO_NAME}.tar.gz does not exist."
@@ -71,14 +84,14 @@ deploy_all() {
     exit 1
   fi
   unzip $BASE_DIR/assembly/target/universal/${PIO_NAME}.zip
-  mv $PIO_NAME $PIO_BIN_DIR
+  mv $PIO_NAME $PIO_HOME
 
-  mkdir $PIO_BIN_DIR/vendors
+  mkdir $PIO_HOME/vendors
 
   if [ ! -f $BASE_DIR/$SPARK_FILE ] ; then
     wget http://d3kbcqa49mib13.cloudfront.net/$SPARK_FILE
   fi
-  tar zxvfC $BASE_DIR/$SPARK_FILE $PIO_BIN_DIR/vendors > /dev/null
+  tar zxvfC $BASE_DIR/$SPARK_FILE $PIO_HOME/vendors > /dev/null
 
   get_es_version
   if [ ! -f $BASE_DIR/$ES_FILE ] ; then
@@ -88,11 +101,11 @@ deploy_all() {
       wget https://artifacts.elastic.co/downloads/elasticsearch/$ES_FILE
     fi
   fi
-  tar zxvfC $BASE_DIR/$ES_FILE $PIO_BIN_DIR/vendors > /dev/null
+  tar zxvfC $BASE_DIR/$ES_FILE $PIO_HOME/vendors > /dev/null
 
 
   ES_NAME=ELASTICSEARCH
-  PIO_ENV_FILE=$PIO_BIN_DIR/conf/pio-env.sh
+  PIO_ENV_FILE=$PIO_HOME/conf/pio-env.sh
   replace_line "s/# PIO_STORAGE_SOURCES_${ES_NAME}_/PIO_STORAGE_SOURCES_${ES_NAME}_/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=${ES_NAME}/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE=${ES_NAME}/" $PIO_ENV_FILE
@@ -100,27 +113,37 @@ deploy_all() {
   replace_line "s/^PIO_STORAGE_SOURCES_PGSQL_/# PIO_STORAGE_SOURCES_PGSQL_/g" $PIO_ENV_FILE
   replace_line "s/# PIO_STORAGE_SOURCES_LOCALFS/PIO_STORAGE_SOURCES_LOCALFS/" $PIO_ENV_FILE
 
-  ES_CONF_FILE=$PIO_BIN_DIR/vendors/elasticsearch-*/config/elasticsearch.yml
+  ES_CONF_FILE=$PIO_HOME/vendors/elasticsearch-*/config/elasticsearch.yml
   echo 'http.cors.enabled: true' >> $ES_CONF_FILE
   echo 'http.cors.allow-origin: "*"' >> $ES_CONF_FILE
+
+  echo "# $PIO_ENV_FILE"
+  cat $PIO_ENV_FILE
+  echo "# $ES_CONF_FILE"
+  cat $ES_CONF_FILE
 }
 
 start_all() {
-  echo "$PIO_BIN_DIR/bin/pio-start-all"
-  $PIO_BIN_DIR/bin/pio-start-all
+  echo "#"
+  echo "# Start $PIO_HOME/bin/pio-start-all"
+  echo "#"
+  $PIO_HOME/bin/pio-start-all
 }
 
 build_template() {
+  echo "#"
+  echo "# Build $TEMPLATE_NAME"
+  echo "#"
   mkdir -p $TEMPLATE_DIR
   cd $TEMPLATE_DIR
   rm -rf $TEMPLATE_NAME
   git clone https://github.com/jpioug/$TEMPLATE_NAME.git
   cd $TEMPLATE_NAME
 
-  pio app new MyApp1
-  pio app list
+  $PIO_CMD app new MyApp1
+  $PIO_CMD app list
 
-  ACCESS_KEY=`pio app list | grep MyApp1 | sed -e "s/.* | \(.*\) | (.*/\1/"`
+  ACCESS_KEY=`$PIO_CMD app list | grep MyApp1 | sed -e "s/.* | \(.*\) | (.*/\1/"`
 
   curl -s -i -X POST http://localhost:7070/events.json?accessKey=$ACCESS_KEY \
     -H "Content-Type: application/json" \
@@ -154,21 +177,27 @@ build_template() {
     curl https://raw.githubusercontent.com/apache/spark/master/data/mllib/sample_movielens_data.txt --create-dirs -o ../sample_movielens_data.txt
   fi
   cp ../sample_movielens_data.txt data/sample_movielens_data.txt
-  python data/import_eventserver.py --access_key $ACCESS_KEY
+  $PYTHON_CMD data/import_eventserver.py --access_key $ACCESS_KEY
 
   replace_line "s/INVALID_APP_NAME/MyApp1/" engine.json
 
-  pio build --verbose
+  $PIO_CMD build --verbose
 }
 
 train_template() {
+  echo "#"
+  echo "# Train $TEMPLATE_NAME"
+  echo "#"
   cd $TEMPLATE_DIR/$TEMPLATE_NAME
-  pio train
+  $PIO_CMD train
 }
 
 deploy_template() {
+  echo "#"
+  echo "# Deploy $TEMPLATE_NAME"
+  echo "#"
   cd $TEMPLATE_DIR/$TEMPLATE_NAME
-  pio deploy &
+  $PIO_CMD deploy &
   sleep 15
   curl -s -H "Content-Type: application/json" -d '{ "user": "1", "num": 4 }' http://localhost:8000/queries.json
   echo
@@ -176,16 +205,38 @@ deploy_template() {
 }
 
 
-stop_all
-clean_all
+if [ x"$RUN_MODE" = "xtemplate" ] ; then
+  BASE_DIR=/tmp/pio_run.$$
+  mkdir -p $BASE_DIR
+  cd $BASE_DIR
 
-build
-deploy_all
-start_all
+  PIO_HOME=/usr/share/predictionio
+else # default
+  cd `dirname $0`
+  BASE_DIR=`pwd`
 
-pio status
+  SPARK_FILE=spark-1.6.3-bin-hadoop2.6.tgz
+  #ES_FILE=elasticsearch-1.7.6.tar.gz
+  ES_FILE=elasticsearch-5.2.1.tar.gz
+
+  PIO_HOME=$BASE_DIR/PredictionIO-bin
+
+  stop_all
+  clean_all
+
+  build
+  deploy_all
+  start_all
+fi
+
+PIO_CMD=$PIO_HOME/bin/pio
+TEMPLATE_DIR=$BASE_DIR/template
+TEMPLATE_NAME=incubator-predictionio-template-recommender
+
+PIP_CMD install --upgrade predictionio
+
+$PIO_CMD status
 
 build_template
 train_template
 deploy_template
-
