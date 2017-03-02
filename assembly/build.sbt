@@ -25,7 +25,7 @@ maintainer in Linux := "Apache Software Foundation"
 packageSummary in Linux := "Apache PredictionIO"
 packageDescription := "Apache PredictionIO is an open source Machine Learning Server built on top of state-of-the-art open source stack for developers and data scientists create predictive engines for any machine learning task."
 
-version in Rpm := version.value.replace("-", "~")
+version in Rpm := version.value.replace("-", "_")
 rpmRelease := "1"
 rpmVendor := "apache"
 rpmUrl := Some("http://predictionio.incubator.apache.org/")
