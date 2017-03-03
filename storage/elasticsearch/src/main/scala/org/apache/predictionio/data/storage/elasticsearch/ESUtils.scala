@@ -38,6 +38,23 @@ import org.apache.http.HttpHost
 object ESUtils {
   val scrollLife = "1m"
 
+  def get[T: Manifest](
+    client: RestClient,
+    index: String,
+    estype: String,
+    query: String,
+    size: Int)(
+      implicit formats: Formats): Seq[T] = {
+    val response = client.performRequest(
+      "POST",
+      s"/$index/$estype/_search",
+      Map("size" -> s"${size}"),
+      new StringEntity(query))
+    val responseJValue = parse(EntityUtils.toString(response.getEntity))
+    val hits = (responseJValue \ "hits" \ "hits").extract[Seq[JValue]]
+    hits.map(h => (h \ "_source").extract[T])
+  }
+
   def getAll[T: Manifest](
     client: RestClient,
     index: String,

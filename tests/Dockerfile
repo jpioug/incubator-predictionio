@@ -22,6 +22,8 @@ ENV ELASTICSEARCH_VERSION 5.2.1
 ENV HBASE_VERSION 1.0.0
 
 ADD docker-files/spark-${SPARK_VERSION}-bin-hadoop2.6.tgz /vendors
+# WORKAROUND: es-hadoop stops on RDD#take(1)
+RUN echo "spark.locality.wait.node 0s" > /vendors/spark-${SPARK_VERSION}-bin-hadoop2.6/conf/spark-defaults.conf
 ENV SPARK_HOME /vendors/spark-${SPARK_VERSION}-bin-hadoop2.6
 
 COPY docker-files/postgresql-9.4-1204.jdbc41.jar /drivers/postgresql-9.4-1204.jdbc41.jar
