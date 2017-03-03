@@ -149,7 +149,7 @@ object ESUtils {
       untilTime.map(x => {
         val v = DateTimeFormat
           .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").print(x.withZone(DateTimeZone.UTC))
-        s"""{"range":{"eventTime":{"gte":"${v}"}}}"""
+        s"""{"range":{"eventTime":{"lt":"${v}"}}}"""
       }),
       entityType.map(x => s"""{"term":{"entityType":"${x}"}}"""),
       entityId.map(x => s"""{"term":{"entityId":"${x}"}}"""),
