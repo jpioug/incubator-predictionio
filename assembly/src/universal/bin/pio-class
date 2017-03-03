@@ -91,7 +91,7 @@ if [ -z $PIO_LOG_DIR ] ; then
     PIO_LOG_DIR=/var/log/predictionio
     touch $PIO_LOG_DIR/pio.log > /dev/null 2>&1
     if [ $? != 0 ] ; then
-      PIO_LOG_DIR=$HOME/pio.log
+      PIO_LOG_DIR=$HOME
     fi
   fi
 fi
