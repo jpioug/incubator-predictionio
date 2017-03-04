@@ -20,8 +20,8 @@ name := "apache-predictionio-data-elasticsearch"
 elasticsearchVersion := "5.2.1"
 
 libraryDependencies ++= Seq(
-  "org.apache.predictionio" %% "apache-predictionio-core" % version.value % "provided",
-  "org.apache.predictionio" %% "apache-predictionio-data" % version.value % "provided",
+  "org.jpioug.predictionio" %% "apache-predictionio-core" % version.value % "provided",
+  "org.jpioug.predictionio" %% "apache-predictionio-data" % version.value % "provided",
   "org.apache.spark"        %% "spark-core"     % sparkVersion.value % "provided",
   "org.apache.spark"        %% "spark-sql"      % sparkVersion.value % "provided",
   "org.elasticsearch.client" % "rest"           % elasticsearchVersion.value,

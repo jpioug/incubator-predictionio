@@ -18,8 +18,8 @@
 name := "apache-predictionio-data-jdbc"
 
 libraryDependencies ++= Seq(
-  "org.apache.predictionio" %% "apache-predictionio-core" % version.value % "provided",
-  "org.apache.predictionio" %% "apache-predictionio-data" % version.value % "provided",
+  "org.jpioug.predictionio" %% "apache-predictionio-core" % version.value % "provided",
+  "org.jpioug.predictionio" %% "apache-predictionio-data" % version.value % "provided",
   "org.apache.spark"        %% "spark-sql"      % sparkVersion.value % "provided",
   "org.postgresql"           % "postgresql"     % "9.4-1204-jdbc41",
   "org.scalikejdbc"         %% "scalikejdbc"    % "2.3.5",

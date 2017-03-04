@@ -21,7 +21,7 @@ name := "apache-predictionio-parent"
 
 version in ThisBuild := "0.11.0-v1-SNAPSHOT"
 
-organization in ThisBuild := "org.apache.predictionio"
+organization in ThisBuild := "org.jpioug.predictionio"
 
 scalaVersion in ThisBuild := "2.10.5"
 

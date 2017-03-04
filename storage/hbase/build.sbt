@@ -18,8 +18,8 @@
 name := "apache-predictionio-data-hbase"
 
 libraryDependencies ++= Seq(
-  "org.apache.predictionio" %% "apache-predictionio-core" % version.value % "provided",
-  "org.apache.predictionio" %% "apache-predictionio-data" % version.value % "provided",
+  "org.jpioug.predictionio" %% "apache-predictionio-core" % version.value % "provided",
+  "org.jpioug.predictionio" %% "apache-predictionio-data" % version.value % "provided",
   "org.apache.spark"        %% "spark-core"     % sparkVersion.value % "provided",
   "org.apache.hbase"         % "hbase-common"   % "0.98.5-hadoop2",
   "org.apache.hbase"         % "hbase-client"   % "0.98.5-hadoop2"
