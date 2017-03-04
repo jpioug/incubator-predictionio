@@ -49,18 +49,16 @@ mappings in Universal := {
   }
 }
 
-linuxPackageMappings += packageTemplateMapping(s"/var/log/${name.value}")() withUser(name.value) withGroup(name.value) //withPerms("775")
-
 linuxPackageMappings := {
     val mappings = linuxPackageMappings.value
     mappings map {  linuxPackage =>
         val linuxFileMappings = linuxPackage.mappings map {
+            case (f, n) if f.getName equals "conf" => f -> s"/etc/${name.value}"
             case (f, n) if f.getName equals "pio-env.sh.template" => f -> s"/etc/${name.value}/pio-env.sh"
             case (f, n) if f.getParent endsWith "conf" => f -> s"/etc/${name.value}/${f.getName}"
+            case (f, n) if f.getName equals "log" => f -> s"/var/log/${name.value}"
+            case (f, n) if f.getName equals "pio.log" => f -> s"/var/log/${name.value}/pio.log"
             case (f, n) => f -> n
-        } filter {
-            case (f, n) if f.getName equals "conf" => false
-            case (f, n) => true
         }
 
         val fileData = linuxPackage.fileData.copy(

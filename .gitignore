@@ -19,6 +19,10 @@ pio.log
 # Ignore source files whose name prefixed with "Private"
 Private*.scala
 quickstartapp/
+# Eclipse
+.project
+.classpath
+.settings/
 # IntelliJ
 *.iml
 .idea/
@@ -30,3 +34,6 @@ apache-rat-0.11.jar
 tests/dist
 tests/docker-files/*.jar
 tests/docker-files/*.tgz
+assembly/src/universal/extra/
+assembly/src/universal/lib/
+!assembly/src/universal/log/pio.log
