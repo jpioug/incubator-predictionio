@@ -33,6 +33,10 @@ COPY docker-files/env-conf/pio-env.sh ${PIO_HOME}/conf/pio-env.sh
 COPY docker-files/pgpass /root/.pgpass
 RUN chmod 600 /root/.pgpass
 
+# Python
+RUN pip install python-dateutil
+RUN pip install pytz
+
 # Default repositories setup
 ENV PIO_STORAGE_REPOSITORIES_METADATA_SOURCE PGSQL
 ENV PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE PGSQL

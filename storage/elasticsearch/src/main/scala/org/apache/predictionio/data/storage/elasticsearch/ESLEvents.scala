@@ -273,7 +273,7 @@ class ESLEvents(val client: ESClient, config: StorageClientConfig, val index: St
       try {
         val query = ESUtils.createEventQuery(
           startTime, untilTime, entityType, entityId,
-          eventNames, targetEntityType, targetEntityId, None)
+          eventNames, targetEntityType, targetEntityId, reversed)
         limit.getOrElse(20) match {
           case -1 => ESUtils.getAll[Event](restClient, index, estype, query).toIterator
           case size => ESUtils.get[Event](restClient, index, estype, query, size).toIterator

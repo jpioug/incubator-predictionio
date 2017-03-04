@@ -158,12 +158,16 @@ object ESUtils {
       eventNames
         .map { xx => xx.map(x => "\"%s\"".format(x)) }
         .map(x => s"""{"terms":{"event":[${x.mkString(",")}]}}""")).flatten.mkString(",")
+    val query = mustQueries.isEmpty match {
+      case true => """query":{"match_all":{}}"""
+      case _ => s"""query":{"bool":{"must":[${mustQueries}]}}"""
+    }
     val sortOrder = reversed.map(x => x match {
       case true => "desc"
       case _ => "asc"
     }).getOrElse("asc")
     s"""{
-       |"query":{"bool":{"must":[${mustQueries}]}},
+       |"${query},
        |"sort":[{"eventTime":{"order":"${sortOrder}"}}]
        |}""".stripMargin
   }
