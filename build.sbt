@@ -169,6 +169,12 @@ val root = (project in file(".")).
     common,
     core,
     data,
+    dataElasticsearch1,
+    dataElasticsearch,
+    dataHbase,
+    dataHdfs,
+    dataJdbc,
+    dataLocalfs,
     tools,
     e2)
 
