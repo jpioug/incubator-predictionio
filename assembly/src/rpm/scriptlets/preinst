@@ -1,0 +1,18 @@
+if ! getent group "predictionio" > /dev/null 2>&1 ; then
+  echo -n "Creating predictionio group..."
+  groupadd -r "predictionio"
+  echo " OK"
+fi
+
+if ! id predictionio > /dev/null 2>&1 ; then
+  echo -n "Creating predictionio user..."
+  useradd --system \
+    -M \
+    --gid "predictionio" \
+    --shell /sbin/nologin \
+    --comment "fess user" \
+    -d "/usr/share/predictionio"  \
+    "predictionio"
+  echo " OK"
+fi
+

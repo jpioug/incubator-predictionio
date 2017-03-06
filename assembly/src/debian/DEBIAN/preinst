@@ -1,0 +1,19 @@
+if ! getent group "predictionio" > /dev/null 2>&1 ; then
+  echo -n "Creating predictionio group..."
+  addgroup --quiet --system "predictionio"
+  echo " OK"
+fi
+
+if ! id predictionio > /dev/null 2>&1 ; then
+  echo -n "Creating predictionio user..."
+  adduser --quiet \
+    --system \
+    --no-create-home \
+    --ingroup "predictionio" \
+    --disabled-password \
+    --shell /bin/false \
+    --home "/usr/share/predictionio"  \
+    "predictionio"
+  echo " OK"
+fi
+

@@ -16,6 +16,8 @@
  */
 
 import NativePackagerHelper._
+import RpmConstants._
+import com.typesafe.sbt.packager.linux.LinuxSymlink
 
 enablePlugins(RpmPlugin, DebianPlugin)
 
@@ -30,6 +32,11 @@ rpmRelease := "1"
 rpmVendor := "apache"
 rpmUrl := Some("http://predictionio.incubator.apache.org/")
 rpmLicense := Some("Apache License Version 2.0")
+
+maintainerScripts in Rpm := maintainerScriptsAppendFromFile((maintainerScripts in Rpm).value)(
+   Pre -> (sourceDirectory.value / "rpm" / "scriptlets" / "preinst"),
+   Postun -> (sourceDirectory.value / "rpm" / "scriptlets" / "postun")
+)
 
 mappings in Universal ++= {
   val releaseFile = baseDirectory.value / ".." / "RELEASE.md"
@@ -73,3 +80,7 @@ linuxPackageMappings := {
     }
 }
 
+linuxPackageSymlinks := {
+  Seq(LinuxSymlink("/usr/bin/pio", s"/usr/share/${name.value}/bin/pio"),
+      LinuxSymlink("/usr/bin/pio-daemon", s"/usr/share/${name.value}/bin/pio-daemon"))
+}
