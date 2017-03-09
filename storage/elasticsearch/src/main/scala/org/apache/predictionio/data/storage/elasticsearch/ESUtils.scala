@@ -131,6 +131,16 @@ object ESUtils {
       }
   }
 
+  def formatUTCDateTime(dt: DateTime): String = {
+    DateTimeFormat
+      .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").print(dt.withZone(DateTimeZone.UTC))
+  }
+
+  def parseUTCDateTime(str: String): DateTime = {
+    DateTimeFormat
+      .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").parseDateTime(str)
+  }
+
   def createEventQuery(
     startTime: Option[DateTime] = None,
     untilTime: Option[DateTime] = None,
@@ -142,13 +152,11 @@ object ESUtils {
     reversed: Option[Boolean] = None): String = {
     val mustQueries = Seq(
       startTime.map(x => {
-        val v = DateTimeFormat
-          .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").print(x.withZone(DateTimeZone.UTC))
+        val v = formatUTCDateTime(x)
         s"""{"range":{"eventTime":{"gte":"${v}"}}}"""
       }),
       untilTime.map(x => {
-        val v = DateTimeFormat
-          .forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ").print(x.withZone(DateTimeZone.UTC))
+        val v = formatUTCDateTime(x)
         s"""{"range":{"eventTime":{"lt":"${v}"}}}"""
       }),
       entityType.map(x => s"""{"term":{"entityType":"${x}"}}"""),
