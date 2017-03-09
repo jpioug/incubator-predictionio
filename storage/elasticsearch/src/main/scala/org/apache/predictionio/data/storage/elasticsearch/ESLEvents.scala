@@ -280,8 +280,8 @@ class ESLEvents(val client: ESClient, config: StorageClientConfig, val index: St
           startTime, untilTime, entityType, entityId,
           eventNames, targetEntityType, targetEntityId, reversed)
         limit.getOrElse(20) match {
-          case -1 => ESUtils.getAll[Event](restClient, index, estype, query).toIterator
-          case size => ESUtils.get[Event](restClient, index, estype, query, size).toIterator
+          case -1 => ESUtils.getEventAll(restClient, index, estype, query).toIterator
+          case size => ESUtils.getEvents(restClient, index, estype, query, size).toIterator
         }
       } catch {
         case e: IOException =>
