@@ -35,8 +35,8 @@ build() {
   echo "#"
   echo "# Build PredictionIO"
   echo "#"
-#  bash $BASE_DIR/make-distribution.sh
-  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
+  bash $BASE_DIR/make-distribution.sh --with-es=5
+#  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
   if [ $? != 0 ] ; then
     echo "Build Failed!"
     exit 1
@@ -72,18 +72,18 @@ deploy_all() {
   echo "#"
   echo "# Deploy PredictionIO"
   echo "#"
-#  PIO_NAME=`ls PredictionIO-*.tar.gz | sed -e "s/.tar.gz//"`
-#  if [ ! -e "$BASE_DIR/${PIO_NAME}.tar.gz" ] ; then
-#    echo "$BASE_DIR/${PIO_NAME}.tar.gz does not exist."
-#    exit 1
-#  fi
-#  tar zxvf ${PIO_NAME}.tar.gz
-  PIO_NAME=`basename $BASE_DIR/assembly/target/universal/*.zip | sed -e "s/.zip//"`
-  if [ ! -e "$BASE_DIR/assembly/target/universal/${PIO_NAME}.zip" ] ; then
-    echo "${PIO_NAME}.zip does not exist."
+  PIO_NAME=`ls PredictionIO-*.tar.gz | sed -e "s/.tar.gz//"`
+  if [ ! -e "$BASE_DIR/${PIO_NAME}.tar.gz" ] ; then
+    echo "$BASE_DIR/${PIO_NAME}.tar.gz does not exist."
     exit 1
   fi
-  unzip $BASE_DIR/assembly/target/universal/${PIO_NAME}.zip
+  tar zxvf ${PIO_NAME}.tar.gz
+#  PIO_NAME=`basename $BASE_DIR/assembly/target/universal/*.zip | sed -e "s/.zip//"`
+#  if [ ! -e "$BASE_DIR/assembly/target/universal/${PIO_NAME}.zip" ] ; then
+#    echo "${PIO_NAME}.zip does not exist."
+#    exit 1
+#  fi
+#  unzip $BASE_DIR/assembly/target/universal/${PIO_NAME}.zip
   mv $PIO_NAME $PIO_HOME
 
   mkdir $PIO_HOME/vendors
@@ -106,12 +106,13 @@ deploy_all() {
 
   ES_NAME=ELASTICSEARCH
   PIO_ENV_FILE=$PIO_HOME/conf/pio-env.sh
-  replace_line "s/# PIO_STORAGE_SOURCES_${ES_NAME}_/PIO_STORAGE_SOURCES_${ES_NAME}_/" $PIO_ENV_FILE
+  #replace_line "s/# PIO_STORAGE_SOURCES_${ES_NAME}_/PIO_STORAGE_SOURCES_${ES_NAME}_/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=${ES_NAME}/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE=${ES_NAME}/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE=LOCALFS/" $PIO_ENV_FILE
   replace_line "s/^PIO_STORAGE_SOURCES_PGSQL_/# PIO_STORAGE_SOURCES_PGSQL_/g" $PIO_ENV_FILE
   replace_line "s/# PIO_STORAGE_SOURCES_LOCALFS/PIO_STORAGE_SOURCES_LOCALFS/" $PIO_ENV_FILE
+  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_HOME=$PIO_HOME/vendors/elasticsearch-5.2.1' >> $PIO_ENV_FILE
 
   ES_CONF_FILE=$PIO_HOME/vendors/elasticsearch-*/config/elasticsearch.yml
   echo 'http.cors.enabled: true' >> $ES_CONF_FILE
