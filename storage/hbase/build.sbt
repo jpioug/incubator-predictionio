@@ -52,5 +52,5 @@ assemblyMergeStrategy in assembly := {
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / "spark" / ("pio-data-hbase-assembly-" + version.value + ".jar")
+assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / "spark" / ("pio-data-hbase-assembly-" + version.value + ".jar")
 

@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+lazy val esLibLocation = settingKey[String]("Jar File Location for elasticsearch")
+
 name := "apache-predictionio-data-elasticsearch"
 
 elasticsearchVersion := "5.2.1"
@@ -53,5 +55,12 @@ assemblyShadeRules in assembly := Seq(
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / "spark" / ("pio-data-elasticsearch-assembly-" + version.value + ".jar")
+esLibLocation := {
+  sys.env.getOrElse("ES_VERSION", "1") match {
+    case "5" => "spark"
+    case _ => "extra"
+  }
+}
+
+assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / esLibLocation.value / ("pio-data-elasticsearch-assembly-" + version.value + ".jar")
 

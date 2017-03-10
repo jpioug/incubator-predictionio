@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+lazy val es1LibLocation = settingKey[String]("Jar File Location for elasticsearch 1.x")
+
 name := "apache-predictionio-data-elasticsearch1"
 
 elasticsearchVersion := "1.7.3"
@@ -43,5 +45,12 @@ assemblyMergeStrategy in assembly := {
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "extra" / ("pio-data-elasticsearch1-assembly-" + version.value + ".jar")
+es1LibLocation := {
+  sys.env.getOrElse("ES_VERSION", "1") match {
+    case "5" => "extra"
+    case _ => "spark"
+  }
+}
+
+assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / es1LibLocation.value / ("pio-data-elasticsearch1-assembly-" + version.value + ".jar")
 

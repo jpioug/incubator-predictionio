@@ -19,6 +19,46 @@
 
 set -e
 
+usage ()
+{
+    echo "Usage: $0 [-h|--help] [--with-es=x]"
+    echo ""
+    echo "  -h|--help    Show usage"
+    echo ""
+    echo "  --with-es=1  Build distribution with Elasticsearch 1 support as default"
+    echo "  --with-es=5  Build distribution with Elasticsearch 5 support as default"
+}
+
+ES_VERSION=1
+
+for i in "$@"
+do
+case $i in
+    -h|--help)
+    usage
+    shift
+    exit
+    ;;
+    --with-es=*)
+    ES_VERSION="${i#*=}"
+    shift
+    ;;
+    *)
+    usage
+    exit 1
+    ;;
+esac
+done
+
+if [ "$ES_VERSION" = "1" ] || [ "$ES_VERSION" = "5" ]
+then
+    echo -e "\033[0;32mBuilding with Elasticsearch $ES_VERSION support as the default choice\033[0m"
+else
+    usage
+    exit 1
+fi
+export ES_VERSION
+
 FWDIR="$(cd `dirname $0`; pwd)"
 DISTDIR="${FWDIR}/dist"
 
@@ -27,14 +67,16 @@ VERSION=$(grep version ${FWDIR}/build.sbt | grep ThisBuild | grep -o '".*"' | se
 echo "Building binary distribution for PredictionIO $VERSION..."
 
 cd ${FWDIR}
-sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly e2/publishLocal tools/assembly assembly/universal:packageBin assembly/universal:packageZipTarball
+rm -rf assembly/src/universal/lib
+sbt/sbt common/publishLocal data/publishLocal core/publishLocal e2/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly tools/assembly assembly/universal:packageBin assembly/universal:packageZipTarball
+
 cd ${FWDIR}
 rm -rf ${DISTDIR}
 mkdir -p ${DISTDIR}/bin
 mkdir -p ${DISTDIR}/conf
 mkdir -p ${DISTDIR}/lib
 mkdir -p ${DISTDIR}/lib/spark
-mkdir -p ${DISTDIR}/extra
+mkdir -p ${DISTDIR}/lib/extra
 mkdir -p ${DISTDIR}/project
 mkdir -p ${DISTDIR}/sbt
 mkdir -p ${DISTDIR}/log
@@ -45,7 +87,7 @@ cp ${FWDIR}/project/build.properties ${DISTDIR}/project
 cp ${FWDIR}/sbt/sbt ${DISTDIR}/sbt
 cp ${FWDIR}/assembly/src/universal/lib/*assembly*jar ${DISTDIR}/lib
 cp ${FWDIR}/assembly/src/universal/lib/spark/*jar ${DISTDIR}/lib/spark
-cp ${FWDIR}/assembly/src/universal/extra/*jar ${DISTDIR}/extra
+cp ${FWDIR}/assembly/src/universal/lib/extra/*jar ${DISTDIR}/lib/extra
 
 rm -f ${DISTDIR}/lib/*javadoc.jar
 rm -f ${DISTDIR}/lib/*sources.jar
