@@ -92,6 +92,7 @@ deploy_all() {
     wget http://d3kbcqa49mib13.cloudfront.net/$SPARK_FILE
   fi
   tar zxvfC $BASE_DIR/$SPARK_FILE $PIO_HOME/vendors > /dev/null
+  echo "spark.locality.wait.node           0s" > `ls -d $PIO_HOME/vendors/spark-*/conf`/spark-defaults.conf
 
   get_es_version
   if [ ! -f $BASE_DIR/$ES_FILE ] ; then
