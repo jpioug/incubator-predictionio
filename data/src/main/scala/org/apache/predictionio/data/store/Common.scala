@@ -24,15 +24,14 @@ import grizzled.slf4j.Logger
 private[predictionio] object Common {
 
   @transient lazy val logger = Logger[this.type]
-  @transient lazy private val appsDb = Storage.getMetaDataApps()
-  @transient lazy private val channelsDb = Storage.getMetaDataChannels()
 
   /* throw exception if invalid app name or channel name */
-  def appNameToId(appName: String, channelName: Option[String]): (Int, Option[Int]) = {
-    val appOpt = appsDb.getByName(appName)
+  def appNameToId(appName: String, channelName: Option[String])(implicit s: Storage):
+                 (Int, Option[Int]) = {
+    val appOpt = s.getMetaDataApps().getByName(appName)
 
     appOpt.map { app =>
-      val channelMap: Map[String, Int] = channelsDb.getByAppid(app.id)
+      val channelMap: Map[String, Int] = s.getMetaDataChannels().getByAppid(app.id)
         .map(c => (c.name, c.id)).toMap
 
       val channelId: Option[Int] = channelName.map { ch =>

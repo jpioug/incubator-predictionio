@@ -140,11 +140,11 @@ class CommandClient(
   }
 
   def futureAppDelete(appName: String)
-      (implicit ec: ExecutionContext): Future[GeneralResponse] = Future {
+      (implicit ec: ExecutionContext, s: Storage): Future[GeneralResponse] = Future {
 
     val response = appClient.getByName(appName) map { app =>
       val data = if (eventClient.remove(app.id)) {
-        Storage.getMetaDataApps.delete(app.id)
+        s.getMetaDataApps.delete(app.id)
         GeneralResponse(1, s"App successfully deleted")
       } else {
         GeneralResponse(0, s"Error removing Event Store for app ${app.name}.");

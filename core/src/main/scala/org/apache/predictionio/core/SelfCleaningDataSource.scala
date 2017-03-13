@@ -45,9 +45,10 @@ trait SelfCleaningDataSource {
     def compare(d1: DateTime, d2: DateTime): Int = d2.compareTo(d1)
   }
 
+  implicit val s: Storage
 
-  @transient lazy private val pEventsDb = Storage.getPEvents()
-  @transient lazy private val lEventsDb = Storage.getLEvents()
+  @transient lazy private val pEventsDb = s.getPEvents()
+  @transient lazy private val lEventsDb = s.getLEvents()
 
   /** :: DeveloperApi ::
     * Current App name which events will be cleaned.
@@ -162,7 +163,7 @@ trait SelfCleaningDataSource {
     eventWindow match {
       case Some(ew) =>
         val result = cleanPEvents(sc)
-        val originalEvents = PEventStore.find(appName)(sc)
+        val originalEvents = new PEventStore().find(appName)(sc)
         val newEvents = result subtract originalEvents
         val eventsToRemove = (originalEvents subtract result).map { case e =>
           e.eventId.getOrElse("")
@@ -229,7 +230,7 @@ trait SelfCleaningDataSource {
     */
   @DeveloperApi
   def cleanPEvents(sc: SparkContext): RDD[Event] = {
-    val pEvents = getCleanedPEvents(PEventStore.find(appName)(sc).sortBy(_.eventTime, false))
+    val pEvents = getCleanedPEvents(new PEventStore().find(appName)(sc).sortBy(_.eventTime, false))
 
     val rdd = eventWindow match {
       case Some(ew) =>
@@ -256,7 +257,7 @@ trait SelfCleaningDataSource {
       case Some(ew) =>
 
         val result = cleanLEvents().toSet
-        val originalEvents = LEventStore.find(appName).toSet
+        val originalEvents = new LEventStore().find(appName).toSet
         val newEvents = result -- originalEvents
         val eventsToRemove = (originalEvents -- result).map { case e =>
           e.eventId.getOrElse("")
@@ -274,7 +275,8 @@ trait SelfCleaningDataSource {
     */
   @DeveloperApi
   def cleanLEvents(): Iterable[Event] = {
-    val lEvents = getCleanedLEvents(LEventStore.find(appName).toList.sortBy(_.eventTime).reverse)
+    val lEvents = getCleanedLEvents(
+      new LEventStore().find(appName).toList.sortBy(_.eventTime).reverse)
 
     val events = eventWindow match {
       case Some(ew) =>

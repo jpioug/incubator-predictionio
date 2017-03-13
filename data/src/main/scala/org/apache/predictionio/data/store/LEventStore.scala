@@ -30,11 +30,11 @@ import scala.concurrent.duration.Duration
 /** This object provides a set of operation to access Event Store
   * without going through Spark's parallelization
   */
-object LEventStore {
+class LEventStore()(implicit s: Storage) {
 
   private val defaultTimeout = Duration(60, "seconds")
 
-  @transient lazy private val eventsDb = Storage.getLEvents()
+  @transient lazy private val eventsDb = s.getLEvents()
 
   /** Reads events of the specified entity. May use this in Algorithm's predict()
     * or Serving logic to have fast event store access.

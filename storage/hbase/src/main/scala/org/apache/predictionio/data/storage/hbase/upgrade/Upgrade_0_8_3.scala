@@ -24,16 +24,10 @@ import grizzled.slf4j.Logger
 import org.apache.predictionio.data.storage.Storage
 import org.apache.predictionio.data.storage.DataMap
 import org.apache.predictionio.data.storage.hbase.HBLEvents
-import org.apache.predictionio.data.storage.hbase.HBEventsUtil
-
-import scala.collection.JavaConversions._
 
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import org.apache.predictionio.data.storage.LEvents
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
-import java.lang.Thread
 
 object CheckDistribution {
   def entityType(eventClient: LEvents, appId: Int)
@@ -48,8 +42,8 @@ object CheckDistribution {
     }
   }
 
-  def runMain(appId: Int) {
-    val eventClient = Storage.getLEvents().asInstanceOf[HBLEvents]
+  def runMain(appId: Int)(implicit s: Storage) {
+    val eventClient = s.getLEvents().asInstanceOf[HBLEvents]
 
     entityType(eventClient, appId)
     .toSeq
@@ -59,7 +53,9 @@ object CheckDistribution {
   }
 
   def main(args: Array[String]) {
-    runMain(args(0).toInt)
+    Storage.using { implicit s =>
+      runMain(args(0).toInt)
+    }
   }
 
 }
@@ -77,11 +73,12 @@ object Upgrade_0_8_3 {
   def main(args: Array[String]) {
     val fromAppId = args(0).toInt
     val toAppId = args(1).toInt
-
-    runMain(fromAppId, toAppId)
+    Storage.using { implicit s =>
+      runMain(fromAppId, toAppId)
+    }
   }
 
-  def runMain(fromAppId: Int, toAppId: Int): Unit = {
+  def runMain(fromAppId: Int, toAppId: Int)(implicit s: Storage): Unit = {
     upgrade(fromAppId, toAppId)
   }
 
@@ -192,9 +189,9 @@ object Upgrade_0_8_3 {
   }
 
   /* For upgrade from 0.8.2 to 0.8.3 only */
-  def upgrade(fromAppId: Int, toAppId: Int) {
+  def upgrade(fromAppId: Int, toAppId: Int)(implicit s: Storage) {
 
-    val eventClient = Storage.getLEvents().asInstanceOf[HBLEvents]
+    val eventClient = s.getLEvents().asInstanceOf[HBLEvents]
 
     require(fromAppId != toAppId,
       s"FromAppId: $fromAppId must be different from toAppId: $toAppId")

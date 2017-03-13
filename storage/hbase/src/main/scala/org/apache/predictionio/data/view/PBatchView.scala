@@ -172,10 +172,11 @@ class PBatchView(
   val appId: Int,
   val startTime: Option[DateTime],
   val untilTime: Option[DateTime],
-  val sc: SparkContext) {
+  val sc: SparkContext,
+  storage: Storage) {
 
   // NOTE: parallel Events DB interface
-  @transient lazy val eventsDb = Storage.getPEvents()
+  @transient lazy val eventsDb = storage.getPEvents()
 
   @transient lazy val _events: RDD[Event] =
     eventsDb.getByAppIdAndTimeAndEntity(

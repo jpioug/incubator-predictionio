@@ -18,37 +18,30 @@
 
 package org.apache.predictionio.data.view
 
-import org.apache.predictionio.data.storage.Event
-import org.apache.predictionio.data.storage.LEvents
-import org.apache.predictionio.data.storage.EventValidation
-import org.apache.predictionio.data.storage.DataMap
 import org.apache.predictionio.data.storage.Storage
 
 import scala.concurrent.ExecutionContext.Implicits.global // TODO
 
-import grizzled.slf4j.Logger
 import org.joda.time.DateTime
 
 import scala.language.implicitConversions
 
-class TestHBLEvents() {
-  @transient lazy val eventsDb = Storage.getLEvents()
-
+class TestHBLEvents(s: Storage) {
   def run(): Unit = {
-    val r = eventsDb.find(
+    val r = s.getLEvents().find(
       appId = 1,
       startTime = None,
       untilTime = None,
       entityType = Some("pio_user"),
       entityId = Some("3")).toList
+
     println(r)
   }
 }
 
-class TestSource(val appId: Int) {
-  @transient lazy val logger = Logger[this.type]
+class TestSource(val appId: Int, storage: Storage) {
   @transient lazy val batchView = new LBatchView(appId,
-    None, None)
+    None, None, storage)
 
   def run(): Unit = {
     println(batchView.events)
@@ -58,40 +51,44 @@ class TestSource(val appId: Int) {
 object QuickTest {
 
   def main(args: Array[String]) {
-    val t = new TestHBLEvents()
-    t.run()
+    Storage.using { implicit s =>
+      val t = new TestHBLEvents(s)
+      t.run()
 
-    // val ts = new TestSource(args(0).toInt)
-    // ts.run()
+      // val ts = new TestSource(args(0).toInt, s)
+      // ts.run()
+    }
   }
 }
 
 object TestEventTime {
-  @transient lazy val batchView = new LBatchView(9, None, None)
 
   // implicit def back2list(es: EventSeq) = es.events
 
   def main(args: Array[String]) {
-    val e = batchView.events.filter(
-      eventOpt = Some("rate"),
-      startTimeOpt = Some(new DateTime(1998, 1, 1, 0, 0))
-      // untilTimeOpt = Some(new DateTime(1997, 1, 1, 0, 0))
-    )
+    Storage.using { implicit s =>
+      val batchView = new LBatchView(9, None, None, s)
+      val e = batchView.events.filter(
+        eventOpt = Some("rate"),
+        startTimeOpt = Some(new DateTime(1998, 1, 1, 0, 0))
+        // untilTimeOpt = Some(new DateTime(1997, 1, 1, 0, 0))
+      )
       // untilTimeOpt = Some(new DateTime(2000, 1, 1, 0, 0)))
 
-    e.foreach { println }
-    println()
-    println()
-    println()
-    val u = batchView.aggregateProperties("pio_item")
-    u.foreach { println }
-    println()
-    println()
-    println()
+      e.foreach { println }
+      println()
+      println()
+      println()
+      val u = batchView.aggregateProperties("pio_item")
+      u.foreach { println }
+      println()
+      println()
+      println()
 
-    // val l: Seq[Event] = e
-    val l = e.map { _.entityId }
-    l.foreach { println }
+      // val l: Seq[Event] = e
+      val l = e.map { _.entityId }
+      l.foreach { println }
+    }
   }
 
 }

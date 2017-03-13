@@ -29,9 +29,11 @@ import org.apache.predictionio.tools.dashboard.Dashboard
 import org.apache.predictionio.tools.dashboard.DashboardConfig
 import org.apache.predictionio.tools.admin.AdminServer
 import org.apache.predictionio.tools.admin.AdminServerConfig
-
 import akka.actor.ActorSystem
 import java.io.File
+
+import org.apache.predictionio.data.storage.Storage
+
 import scala.io.Source
 import semverfi._
 
@@ -60,11 +62,10 @@ object Management extends EitherLogging {
     * @param da An instance of [[DashboardArgs]]
     * @return An instance of [[ActorSystem]] in which the server is being executed
     */
-  def dashboard(da: DashboardArgs): ActorSystem = {
+  def dashboard(da: DashboardArgs)(implicit s: Storage): ActorSystem = {
     info(s"Creating dashboard at ${da.ip}:${da.port}")
-    Dashboard.createDashboard(DashboardConfig(
-      ip = da.ip,
-      port = da.port))
+    Dashboard.createDashboard(
+      DashboardConfig(ip = da.ip, port = da.port))
   }
 
   /** Starts an eventserver server and returns immediately
@@ -72,12 +73,10 @@ object Management extends EitherLogging {
     * @param ea An instance of [[EventServerArgs]]
     * @return An instance of [[ActorSystem]] in which the server is being executed
     */
-  def eventserver(ea: EventServerArgs): ActorSystem = {
+  def eventserver(ea: EventServerArgs)(implicit s: Storage): ActorSystem = {
     info(s"Creating Event Server at ${ea.ip}:${ea.port}")
-    EventServer.createEventServer(EventServerConfig(
-      ip = ea.ip,
-      port = ea.port,
-      stats = ea.stats))
+    EventServer.createEventServer(
+      EventServerConfig(ip = ea.ip, port = ea.port, stats = ea.stats))
   }
 
   /** Starts an adminserver server and returns immediately
@@ -85,12 +84,10 @@ object Management extends EitherLogging {
     * @param aa An instance of [[AdminServerArgs]]
     * @return An instance of [[ActorSystem]] in which the server is being executed
     */
-  def adminserver(aa: AdminServerArgs): ActorSystem = {
+  def adminserver(aa: AdminServerArgs)(implicit s: Storage): ActorSystem = {
     info(s"Creating Admin Server at ${aa.ip}:${aa.port}")
-    AdminServer.createAdminServer(AdminServerConfig(
-      ip = aa.ip,
-      port = aa.port
-    ))
+    AdminServer.createAdminServer(
+      AdminServerConfig(ip = aa.ip, port = aa.port))
   }
 
   private def stripMarginAndNewlines(string: String): String =
@@ -151,27 +148,27 @@ object Management extends EitherLogging {
     } else {
       return logAndFail("Unable to locate a proper Apache Spark installation. Aborting.")
     }
-    info("Inspecting storage backend connections...")
-    try {
-      storage.Storage.verifyAllDataObjects()
-    } catch {
-      case e: Throwable =>
-        val errStr = s"""Unable to connect to all storage backends successfully.
-            |The following shows the error message from the storage backend.
-            |${e.getMessage} (${e.getClass.getName})", e)
-            |Dumping configuration of initialized storage backend sources.
-            |"Please make sure they are correct.
-            |"""
-        val sources = storage.Storage.config.get("sources") map { src =>
-          src map { case (s, p) =>
-            s"Source Name: $s; Type: ${p.getOrElse("type", "(error)")}; " +
-              s"Configuration: ${p.getOrElse("config", "(error)")}"
-          } mkString("\n")
-        } getOrElse {
-          "No properly configured storage backend sources."
-        }
-        return logAndFail(errStr + sources)
-    }
+//    TODO info("Inspecting storage backend connections...")
+//    try {
+//      storage.Storage.verifyAllDataObjects()
+//    } catch {
+//      case e: Throwable =>
+//        val errStr = s"""Unable to connect to all storage backends successfully.
+//            |The following shows the error message from the storage backend.
+//            |${e.getMessage} (${e.getClass.getName})", e)
+//            |Dumping configuration of initialized storage backend sources.
+//            |"Please make sure they are correct.
+//            |"""
+//        val sources = storage.Storage.config.get("sources") map { src =>
+//          src map { case (s, p) =>
+//            s"Source Name: $s; Type: ${p.getOrElse("type", "(error)")}; " +
+//              s"Configuration: ${p.getOrElse("config", "(error)")}"
+//          } mkString("\n")
+//        } getOrElse {
+//          "No properly configured storage backend sources."
+//        }
+//        return logAndFail(errStr + sources)
+//    }
     info("Your system is all ready to go.")
     Right(pioStatus)
   }

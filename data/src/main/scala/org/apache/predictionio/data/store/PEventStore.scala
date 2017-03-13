@@ -32,9 +32,9 @@ import scala.concurrent.ExecutionContext
 /** This object provides a set of operation to access Event Store
   * with Spark's parallelization
   */
-object PEventStore {
+class PEventStore()(implicit s: Storage) {
 
-  @transient lazy private val eventsDb = Storage.getPEvents()
+  @transient lazy private val eventsDb = s.getPEvents()
 
   /** Read events from Event Store
     *

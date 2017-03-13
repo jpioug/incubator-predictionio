@@ -27,12 +27,10 @@ import org.apache.predictionio.controller.Utils
 import org.apache.predictionio.core.BuildInfo
 import org.apache.predictionio.data.api.{EventServer, EventServerConfig}
 import org.apache.predictionio.data.storage
-import org.apache.predictionio.tools.{RunServer, RunWorkflow, Common}
-import org.apache.predictionio.tools.commands.{
-  DashboardArgs, AdminServerArgs, ImportArgs, ExportArgs,
-  BuildArgs, EngineArgs}
-import org.apache.predictionio.tools.{
-  EventServerArgs, SparkArgs, WorkflowArgs, ServerArgs, DeployArgs}
+import org.apache.predictionio.data.storage.Storage
+import org.apache.predictionio.tools.{Common, RunServer, RunWorkflow}
+import org.apache.predictionio.tools.commands.{AdminServerArgs, BuildArgs, DashboardArgs, EngineArgs, ExportArgs, ImportArgs}
+import org.apache.predictionio.tools.{DeployArgs, EventServerArgs, ServerArgs, SparkArgs, WorkflowArgs}
 import org.apache.predictionio.tools.EventServerArgs
 import org.apache.predictionio.tools.admin.{AdminServer, AdminServerConfig}
 import org.apache.predictionio.tools.dashboard.{Dashboard, DashboardConfig}
@@ -624,96 +622,99 @@ object Console extends Logging {
       }
 
     parser.parse(consoleArgs, ConsoleArgs()) map { pca =>
-      val ca = pca.copy(
-        spark = pca.spark.copy(sparkPassThrough = sparkPassThroughArgs),
-        driverPassThrough = driverPassThroughArgs)
-      WorkflowUtils.modifyLogging(ca.verbose)
-      val rv: Int = ca.commands match {
-        case Seq("") =>
-          System.err.println(help())
-          1
-        case Seq("version") =>
-          Pio.version()
-        case Seq("build") =>
-          Pio.build(
-            ca.engine, ca.build, ca.pioHome.get, ca.verbose)
-        case Seq("train") =>
-          Pio.train(
-            ca.engine, ca.workflow, ca.spark, ca.pioHome.get, ca.verbose)
-        case Seq("eval") =>
-          Pio.eval(
-            ca.engine, ca.workflow, ca.spark, ca.pioHome.get, ca.verbose)
-        case Seq("deploy") =>
-          Pio.deploy(
-            ca.engine,
-            ca.engineInstanceId,
-            ServerArgs(
-              ca.deploy,
-              ca.eventServer,
-              ca.workflow.batch,
-              ca.accessKey.accessKey,
-              ca.workflow.variantJson,
-              ca.workflow.jsonExtractor),
-            ca.spark,
-            ca.pioHome.get,
-            ca.verbose)
-        case Seq("undeploy") =>
-          Pio.undeploy(ca.deploy)
-        case Seq("dashboard") =>
-          Pio.dashboard(ca.dashboard)
-        case Seq("eventserver") =>
-          Pio.eventserver(ca.eventServer)
-        case Seq("adminserver") =>
-          Pio.adminserver(ca.adminServer)
-        case Seq("run") =>
-          Pio.run(
-            ca.engine,
-            ca.mainClass.get,
-            ca.driverPassThrough,
-            ca.build,
-            ca.spark,
-            ca.pioHome.get,
-            ca.verbose)
-        case Seq("status") =>
-          Pio.status(ca.pioHome, ca.spark.sparkHome)
-        case Seq("upgrade") =>
-          error("Upgrade is no longer supported")
-          1
-        case Seq("app", "new") =>
-          Pio.App.create(
-            ca.app.name, ca.app.id, ca.app.description, ca.accessKey.accessKey)
-        case Seq("app", "list") =>
-          Pio.App.list()
-        case Seq("app", "show") =>
-          Pio.App.show(ca.app.name)
-        case Seq("app", "delete") =>
-          Pio.App.delete(ca.app.name, ca.app.force)
-        case Seq("app", "data-delete") =>
-          Pio.App.dataDelete(
-            ca.app.name, ca.app.dataDeleteChannel, ca.app.all, ca.app.force)
-        case Seq("app", "channel-new") =>
-          Pio.App.channelNew(ca.app.name, ca.app.channel)
-        case Seq("app", "channel-delete") =>
-          Pio.App.channelDelete(ca.app.name, ca.app.channel, ca.app.force)
-        case Seq("accesskey", "new") =>
-          Pio.AccessKey.create(
-            ca.app.name, ca.accessKey.accessKey, ca.accessKey.events)
-        case Seq("accesskey", "list") =>
-         Pio.AccessKey.list(
-           if (ca.app.name == "") None else Some(ca.app.name))
-        case Seq("accesskey", "delete") =>
-          Pio.AccessKey.delete(ca.accessKey.accessKey)
-        case Seq("template", _) =>
-          error("template commands are no longer supported.")
-          error("Please use git to get and manage your templates.")
-          1
-        case Seq("export") =>
-          Pio.export(ca.export, ca.spark, ca.pioHome.get)
-        case Seq("import") =>
-          Pio.imprt(ca.imprt, ca.spark, ca.pioHome.get)
-        case _ =>
-          System.err.println(help(ca.commands))
-          1
+      val rv: Int = Storage.using { implicit s =>
+        val ca = pca.copy(
+          spark = pca.spark.copy(sparkPassThrough = sparkPassThroughArgs),
+          driverPassThrough = driverPassThroughArgs)
+        WorkflowUtils.modifyLogging(ca.verbose)
+
+        ca.commands match {
+          case Seq("") =>
+            System.err.println(help())
+            1
+          case Seq("version") =>
+            Pio.version()
+          case Seq("build") =>
+            Pio.build(
+              ca.engine, ca.build, ca.pioHome.get, ca.verbose)
+          case Seq("train") =>
+            Pio.train(
+              ca.engine, ca.workflow, ca.spark, ca.pioHome.get, ca.verbose)
+          case Seq("eval") =>
+            Pio.eval(
+              ca.engine, ca.workflow, ca.spark, ca.pioHome.get, ca.verbose)
+          case Seq("deploy") =>
+            Pio.deploy(
+              ca.engine,
+              ca.engineInstanceId,
+              ServerArgs(
+                ca.deploy,
+                ca.eventServer,
+                ca.workflow.batch,
+                ca.accessKey.accessKey,
+                ca.workflow.variantJson,
+                ca.workflow.jsonExtractor),
+              ca.spark,
+              ca.pioHome.get,
+              ca.verbose)
+          case Seq("undeploy") =>
+            Pio.undeploy(ca.deploy)
+          case Seq("dashboard") =>
+            Pio.dashboard(ca.dashboard)
+          case Seq("eventserver") =>
+            Pio.eventserver(ca.eventServer)
+          case Seq("adminserver") =>
+            Pio.adminserver(ca.adminServer)
+          case Seq("run") =>
+            Pio.run(
+              ca.engine,
+              ca.mainClass.get,
+              ca.driverPassThrough,
+              ca.build,
+              ca.spark,
+              ca.pioHome.get,
+              ca.verbose)
+          case Seq("status") =>
+            Pio.status(ca.pioHome, ca.spark.sparkHome)
+          case Seq("upgrade") =>
+            error("Upgrade is no longer supported")
+            1
+          case Seq("app", "new") =>
+            Pio.App.create(
+              ca.app.name, ca.app.id, ca.app.description, ca.accessKey.accessKey)
+          case Seq("app", "list") =>
+            Pio.App.list()
+          case Seq("app", "show") =>
+            Pio.App.show(ca.app.name)
+          case Seq("app", "delete") =>
+            Pio.App.delete(ca.app.name, ca.app.force)
+          case Seq("app", "data-delete") =>
+            Pio.App.dataDelete(
+              ca.app.name, ca.app.dataDeleteChannel, ca.app.all, ca.app.force)
+          case Seq("app", "channel-new") =>
+            Pio.App.channelNew(ca.app.name, ca.app.channel)
+          case Seq("app", "channel-delete") =>
+            Pio.App.channelDelete(ca.app.name, ca.app.channel, ca.app.force)
+          case Seq("accesskey", "new") =>
+            Pio.AccessKey.create(
+              ca.app.name, ca.accessKey.accessKey, ca.accessKey.events)
+          case Seq("accesskey", "list") =>
+           Pio.AccessKey.list(
+             if (ca.app.name == "") None else Some(ca.app.name))
+          case Seq("accesskey", "delete") =>
+            Pio.AccessKey.delete(ca.accessKey.accessKey)
+          case Seq("template", _) =>
+            error("template commands are no longer supported.")
+            error("Please use git to get and manage your templates.")
+            1
+          case Seq("export") =>
+            Pio.export(ca.export, ca.spark, ca.pioHome.get)
+          case Seq("import") =>
+            Pio.imprt(ca.imprt, ca.spark, ca.pioHome.get)
+          case _ =>
+            System.err.println(help(ca.commands))
+            1
+        }
       }
       sys.exit(rv)
     } getOrElse {

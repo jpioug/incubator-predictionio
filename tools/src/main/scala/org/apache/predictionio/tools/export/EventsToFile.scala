@@ -69,40 +69,42 @@ object EventsToFile extends Logging {
       }
     }
     parser.parse(args, EventsToFileArgs()) map { args =>
-      // get channelId
-      val channels = Storage.getMetaDataChannels
-      val channelMap = channels.getByAppid(args.appId).map(c => (c.name, c.id)).toMap
+      Storage.using { implicit s =>
+        // get channelId
+        val channels = s.getMetaDataChannels
+        val channelMap = channels.getByAppid(args.appId).map(c => (c.name, c.id)).toMap
 
-      val channelId: Option[Int] = args.channel.map { ch =>
-        if (!channelMap.contains(ch)) {
-          error(s"Channel ${ch} doesn't exist in this app.")
-          sys.exit(1)
+        val channelId: Option[Int] = args.channel.map { ch =>
+          if (!channelMap.contains(ch)) {
+            error(s"Channel ${ch} doesn't exist in this app.")
+            sys.exit(1)
+          }
+
+          channelMap(ch)
         }
 
-        channelMap(ch)
-      }
+        val channelStr = args.channel.map(n => " Channel " + n).getOrElse("")
 
-      val channelStr = args.channel.map(n => " Channel " + n).getOrElse("")
-
-      WorkflowUtils.modifyLogging(verbose = args.verbose)
-      @transient lazy implicit val formats = Utils.json4sDefaultFormats +
-        new EventJson4sSupport.APISerializer
-      val sc = WorkflowContext(
-        mode = "Export",
-        batch = "App ID " + args.appId + channelStr,
-        executorEnv = Runner.envStringToMap(args.env))
-      val sqlContext = new SQLContext(sc)
-      val events = Storage.getPEvents()
-      val eventsRdd = events.find(appId = args.appId, channelId = channelId)(sc)
-      val jsonStringRdd = eventsRdd.map(write(_))
-      if (args.format == "json") {
-        jsonStringRdd.saveAsTextFile(args.outputPath)
-      } else {
-        val jsonDf = sqlContext.read.json(jsonStringRdd)
-        jsonDf.write.mode(SaveMode.ErrorIfExists).parquet(args.outputPath)
+        WorkflowUtils.modifyLogging(verbose = args.verbose)
+        @transient lazy implicit val formats = Utils.json4sDefaultFormats +
+          new EventJson4sSupport.APISerializer
+        val sc = WorkflowContext(
+          mode = "Export",
+          batch = "App ID " + args.appId + channelStr,
+          executorEnv = Runner.envStringToMap(args.env))
+        val sqlContext = new SQLContext(sc)
+        val events = s.getPEvents()
+        val eventsRdd = events.find(appId = args.appId, channelId = channelId)(sc)
+        val jsonStringRdd = eventsRdd.map(write(_))
+        if (args.format == "json") {
+          jsonStringRdd.saveAsTextFile(args.outputPath)
+        } else {
+          val jsonDf = sqlContext.read.json(jsonStringRdd)
+          jsonDf.write.mode(SaveMode.ErrorIfExists).parquet(args.outputPath)
+        }
+        info(s"Events are exported to ${args.outputPath}/.")
+        info("Done.")
       }
-      info(s"Events are exported to ${args.outputPath}/.")
-      info("Done.")
     }
   }
 }

@@ -36,7 +36,7 @@ import org.apache.predictionio.authentication.KeyAuthentication
 import org.apache.predictionio.configuration.SSLConfiguration
 import org.apache.predictionio.controller.{Engine, Params, Utils, WithPrId}
 import org.apache.predictionio.core.{BaseAlgorithm, BaseServing, Doer}
-import org.apache.predictionio.data.storage.{EngineInstance, Storage}
+import org.apache.predictionio.data.storage.{EngineInstance, EngineInstances, Models, Storage}
 import org.apache.predictionio.workflow.JsonExtractorOption.JsonExtractorOption
 import org.json4s._
 import org.json4s.native.JsonMethods._
@@ -100,8 +100,6 @@ case class ReloadServer()
 
 object CreateServer extends Logging {
   val actorSystem = ActorSystem("pio-server")
-  val engineInstances = Storage.getMetaDataEngineInstances
-  val modeldata = Storage.getModelDataModels
 
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[ServerConfig]("CreateServer") {
@@ -164,28 +162,37 @@ object CreateServer extends Logging {
 
     parser.parse(args, ServerConfig()) map { sc =>
       WorkflowUtils.modifyLogging(sc.verbose)
-      engineInstances.get(sc.engineInstanceId) map { engineInstance =>
-        val engineId = sc.engineId.getOrElse(engineInstance.engineId)
-        val engineVersion = sc.engineVersion.getOrElse(
-          engineInstance.engineVersion)
-        val engineFactoryName = engineInstance.engineFactory
-        val master = actorSystem.actorOf(Props(
-          classOf[MasterActor],
-          sc,
-          engineInstance,
-          engineFactoryName),
-        "master")
-        implicit val timeout = Timeout(5.seconds)
-        master ? StartServer()
-        actorSystem.awaitTermination
-      } getOrElse {
-        error(s"Invalid engine instance ID. Aborting server.")
+
+      Storage.using { implicit s =>
+        val engineInstances = s.getMetaDataEngineInstances()
+        val modeldata = s.getModelDataModels()
+
+        s.getMetaDataEngineInstances().get(sc.engineInstanceId) map { engineInstance =>
+          val engineId = sc.engineId.getOrElse(engineInstance.engineId)
+          val engineVersion = sc.engineVersion.getOrElse(
+            engineInstance.engineVersion)
+          val engineFactoryName = engineInstance.engineFactory
+          val master = actorSystem.actorOf(Props(
+            classOf[MasterActor],
+            sc,
+            modeldata,
+            engineInstances,
+            engineInstance,
+            engineFactoryName),
+            "master")
+          implicit val timeout = Timeout(5.seconds)
+          master ? StartServer()
+          actorSystem.awaitTermination
+        } getOrElse {
+          error(s"Invalid engine instance ID. Aborting server.")
+        }
       }
     }
   }
 
   def createServerActorWithEngine[TD, EIN, PD, Q, P, A](
     sc: ServerConfig,
+    modeldata: Models,
     engineInstance: EngineInstance,
     engine: Engine[TD, EIN, PD, Q, P, A],
     engineLanguage: EngineLanguage.Value): ActorRef = {
@@ -247,6 +254,8 @@ object CreateServer extends Logging {
 
 class MasterActor (
     sc: ServerConfig,
+    modeldata: Models,
+    engineInstances: EngineInstances,
     engineInstance: EngineInstance,
     engineFactoryName: String) extends Actor with SSLConfiguration with KeyAuthentication {
   val log = Logging(context.system, this)
@@ -289,6 +298,7 @@ class MasterActor (
     case x: StartServer =>
       val actor = createServerActor(
         sc,
+        modeldata,
         engineInstance,
         engineFactoryName)
       currentServerActor = Some(actor)
@@ -317,12 +327,12 @@ class MasterActor (
     case x: ReloadServer =>
       log.info("Reload server command received.")
       val latestEngineInstance =
-        CreateServer.engineInstances.getLatestCompleted(
+        engineInstances.getLatestCompleted(
           engineInstance.engineId,
           engineInstance.engineVersion,
           engineInstance.engineVariant)
       latestEngineInstance map { lr =>
-        val actor = createServerActor(sc, lr, engineFactoryName)
+        val actor = createServerActor(sc, modeldata, lr, engineFactoryName)
         sprayHttpListener.map { l =>
           l ! Http.Unbind(5.seconds)
           val settings = ServerSettings(system)
@@ -360,6 +370,7 @@ class MasterActor (
 
   def createServerActor(
       sc: ServerConfig,
+      modeldata: Models,
       engineInstance: EngineInstance,
       engineFactoryName: String): ActorRef = {
     val (engineLanguage, engineFactory) =
@@ -375,8 +386,8 @@ class MasterActor (
 
     CreateServer.createServerActorWithEngine(
       sc,
+      modeldata,
       engineInstance,
-      // engine,
       deployableEngine,
       engineLanguage)
   }

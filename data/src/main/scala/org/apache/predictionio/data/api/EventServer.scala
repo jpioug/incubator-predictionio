@@ -611,12 +611,12 @@ case class EventServerConfig(
   stats: Boolean = false)
 
 object EventServer {
-  def createEventServer(config: EventServerConfig): ActorSystem = {
+  def createEventServer(config: EventServerConfig)(implicit s: Storage): ActorSystem = {
     implicit val system = ActorSystem("EventServerSystem")
 
-    val eventClient = Storage.getLEvents()
-    val accessKeysClient = Storage.getMetaDataAccessKeys()
-    val channelsClient = Storage.getMetaDataChannels()
+    val eventClient = s.getLEvents()
+    val accessKeysClient = s.getMetaDataAccessKeys()
+    val channelsClient = s.getMetaDataChannels()
 
     val serverActor = system.actorOf(
       Props(
@@ -636,9 +636,10 @@ object EventServer {
 
 object Run {
   def main(args: Array[String]) {
-    EventServer.createEventServer(EventServerConfig(
-      ip = "0.0.0.0",
-      port = 7070))
-    .awaitTermination
+    Storage.using { implicit s =>
+      EventServer.createEventServer(
+        EventServerConfig(ip = "0.0.0.0", port = 7070)
+      ).awaitTermination
+    }
   }
 }

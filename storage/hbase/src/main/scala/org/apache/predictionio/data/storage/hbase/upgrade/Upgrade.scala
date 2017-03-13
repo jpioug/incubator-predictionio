@@ -36,7 +36,9 @@ object Upgrade {
     val batchSize = args.lift(2).map(_.toInt).getOrElse(100)
     val fromNamespace = args.lift(3).getOrElse("predictionio_eventdata")
 
-    upgrade(fromAppId, toAppId, batchSize, fromNamespace)
+    Storage.using { implicit s =>
+      upgrade(fromAppId, toAppId, batchSize, fromNamespace)
+    }
   }
 
   /* For upgrade from 0.8.0 or 0.8.1 to 0.8.2 only */
@@ -44,9 +46,9 @@ object Upgrade {
     fromAppId: Int,
     toAppId: Int,
     batchSize: Int,
-    fromNamespace: String) {
+    fromNamespace: String)(implicit s: Storage) {
 
-    val events = Storage.getLEvents().asInstanceOf[HBLEvents]
+    val events = s.getLEvents().asInstanceOf[HBLEvents]
 
     // Assume already run "pio app new <newapp>" (new app already created)
     // TODO: check if new table empty and warn user if not

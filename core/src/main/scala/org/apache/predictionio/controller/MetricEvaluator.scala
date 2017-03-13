@@ -117,29 +117,34 @@ object MetricEvaluator {
   def apply[EI, Q, P, A, R](
     metric: Metric[EI, Q, P, A, R],
     otherMetrics: Seq[Metric[EI, Q, P, A, _]],
-    outputPath: String): MetricEvaluator[EI, Q, P, A, R] = {
+    outputPath: String,
+    storage: Storage): MetricEvaluator[EI, Q, P, A, R] = {
     new MetricEvaluator[EI, Q, P, A, R](
       metric,
       otherMetrics,
-      Some(outputPath))
+      Some(outputPath),
+      storage)
   }
 
   def apply[EI, Q, P, A, R](
     metric: Metric[EI, Q, P, A, R],
-    otherMetrics: Seq[Metric[EI, Q, P, A, _]])
+    otherMetrics: Seq[Metric[EI, Q, P, A, _]],
+    storage: Storage)
   : MetricEvaluator[EI, Q, P, A, R] = {
     new MetricEvaluator[EI, Q, P, A, R](
       metric,
       otherMetrics,
-      None)
+      None,
+      storage)
   }
 
-  def apply[EI, Q, P, A, R](metric: Metric[EI, Q, P, A, R])
+  def apply[EI, Q, P, A, R](metric: Metric[EI, Q, P, A, R], storage: Storage)
   : MetricEvaluator[EI, Q, P, A, R] = {
     new MetricEvaluator[EI, Q, P, A, R](
       metric,
       Seq[Metric[EI, Q, P, A, _]](),
-      None)
+      None,
+      storage)
   }
 
   case class NameParams(name: String, params: Params) {
@@ -185,10 +190,11 @@ object MetricEvaluator {
 class MetricEvaluator[EI, Q, P, A, R] (
   val metric: Metric[EI, Q, P, A, R],
   val otherMetrics: Seq[Metric[EI, Q, P, A, _]],
-  val outputPath: Option[String])
+  val outputPath: Option[String],
+  storage: Storage)
   extends BaseEvaluator[EI, Q, P, A, MetricEvaluatorResult[R]] {
   @transient lazy val logger = Logger[this.type]
-  @transient val engineInstances = Storage.getMetaDataEngineInstances()
+  @transient val engineInstances = storage.getMetaDataEngineInstances()
 
   def saveEngineJson(
     evaluation: Evaluation,

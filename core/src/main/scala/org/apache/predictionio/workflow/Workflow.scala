@@ -25,7 +25,7 @@ import org.apache.predictionio.controller.Evaluation
 import org.apache.predictionio.core.BaseEngine
 import org.apache.predictionio.core.BaseEvaluator
 import org.apache.predictionio.core.BaseEvaluatorResult
-import org.apache.predictionio.data.storage.EvaluationInstance
+import org.apache.predictionio.data.storage.{EvaluationInstance, EvaluationInstances}
 
 /** Collection of workflow creation methods.
   * @group Workflow
@@ -85,12 +85,14 @@ object Workflow {
       engineParamsGenerator: EngineParamsGenerator,
       env: Map[String, String] = WorkflowUtils.pioEnvVars,
       evaluationInstance: EvaluationInstance = EvaluationInstance(),
+      evaluationInstances: EvaluationInstances,
       params: WorkflowParams = WorkflowParams()) {
     runEvaluationTypeless(
       evaluation = evaluation,
       engine = evaluation.engine,
       engineParamsList = engineParamsGenerator.engineParamsList,
       evaluationInstance = evaluationInstance,
+      evaluationInstances = evaluationInstances,
       evaluator = evaluation.evaluator,
       env = env,
       params = params
@@ -103,6 +105,7 @@ object Workflow {
       engine: BaseEngine[EI, Q, P, A],
       engineParamsList: Seq[EngineParams],
       evaluationInstance: EvaluationInstance,
+      evaluationInstances: EvaluationInstances,
       evaluator: BaseEvaluator[EEI, EQ, EP, EA, ER],
       env: Map[String, String] = WorkflowUtils.pioEnvVars,
       params: WorkflowParams = WorkflowParams()) {
@@ -111,6 +114,7 @@ object Workflow {
       engine = engine,
       engineParamsList = engineParamsList,
       evaluationInstance = evaluationInstance,
+      evaluationInstances = evaluationInstances,
       evaluator = evaluator.asInstanceOf[BaseEvaluator[EI, Q, P, A, ER]],
       env = env,
       params = params)
@@ -123,6 +127,7 @@ object Workflow {
       engine: BaseEngine[EI, Q, P, A],
       engineParamsList: Seq[EngineParams],
       evaluationInstance: EvaluationInstance,
+      evaluationInstances: EvaluationInstances,
       evaluator: BaseEvaluator[EI, Q, P, A, R],
       env: Map[String, String] = WorkflowUtils.pioEnvVars,
       params: WorkflowParams = WorkflowParams()) {
@@ -131,6 +136,7 @@ object Workflow {
       engine = engine,
       engineParamsList = engineParamsList,
       evaluationInstance = evaluationInstance,
+      evaluationInstances = evaluationInstances,
       evaluator = evaluator,
       env = env,
       params = params)

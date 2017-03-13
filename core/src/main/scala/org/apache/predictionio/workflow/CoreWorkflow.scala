@@ -23,11 +23,7 @@ import org.apache.predictionio.controller.Evaluation
 import org.apache.predictionio.core.BaseEngine
 import org.apache.predictionio.core.BaseEvaluator
 import org.apache.predictionio.core.BaseEvaluatorResult
-import org.apache.predictionio.data.storage.EngineInstance
-import org.apache.predictionio.data.storage.EvaluationInstance
-import org.apache.predictionio.data.storage.Model
-import org.apache.predictionio.data.storage.Storage
-
+import org.apache.predictionio.data.storage._
 import com.github.nscala_time.time.Imports.DateTime
 import grizzled.slf4j.Logger
 
@@ -38,14 +34,13 @@ import scala.language.existentials
   */
 object CoreWorkflow {
   @transient lazy val logger = Logger[this.type]
-  @transient lazy val engineInstances = Storage.getMetaDataEngineInstances
-  @transient lazy val evaluationInstances =
-    Storage.getMetaDataEvaluationInstances()
 
   def runTrain[EI, Q, P, A](
       engine: BaseEngine[EI, Q, P, A],
       engineParams: EngineParams,
       engineInstance: EngineInstance,
+      engineInstances: EngineInstances,
+      metadata: Models,
       env: Map[String, String] = WorkflowUtils.pioEnvVars,
       params: WorkflowParams = WorkflowParams()) {
     logger.debug("Starting SparkContext")
@@ -71,17 +66,14 @@ object CoreWorkflow {
         params = params
       )
 
-      val instanceId = Storage.getMetaDataEngineInstances
-
       val kryo = KryoInstantiator.newKryoInjection
 
       logger.info("Inserting persistent model")
-      Storage.getModelDataModels.insert(Model(
+      metadata.insert(Model(
         id = engineInstance.id,
         models = kryo(models)))
 
       logger.info("Updating engine instance")
-      val engineInstances = Storage.getMetaDataEngineInstances
       engineInstances.update(engineInstance.copy(
         status = "COMPLETED",
         endTime = DateTime.now
@@ -105,6 +97,7 @@ object CoreWorkflow {
       engine: BaseEngine[EI, Q, P, A],
       engineParamsList: Seq[EngineParams],
       evaluationInstance: EvaluationInstance,
+      evaluationInstances: EvaluationInstances,
       evaluator: BaseEvaluator[EI, Q, P, A, R],
       env: Map[String, String] = WorkflowUtils.pioEnvVars,
       params: WorkflowParams = WorkflowParams()) {

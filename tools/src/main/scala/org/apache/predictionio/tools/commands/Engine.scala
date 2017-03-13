@@ -19,27 +19,21 @@ package org.apache.predictionio.tools.commands
 
 import org.apache.predictionio.core.BuildInfo
 import org.apache.predictionio.controller.Utils
-import org.apache.predictionio.data.storage
 import org.apache.predictionio.tools.EitherLogging
-import org.apache.predictionio.tools.{RunWorkflow, RunServer}
-import org.apache.predictionio.tools.{DeployArgs, WorkflowArgs, SparkArgs, ServerArgs}
+import org.apache.predictionio.tools.{RunServer, RunWorkflow}
+import org.apache.predictionio.tools.{DeployArgs, ServerArgs, SparkArgs, WorkflowArgs}
 import org.apache.predictionio.tools.console.Console
 import org.apache.predictionio.tools.Common._
 import org.apache.predictionio.tools.ReturnTypes._
 import org.apache.predictionio.workflow.WorkflowUtils
-
 import org.apache.commons.io.FileUtils
-import org.json4s.native.Serialization.read
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization.read
-import org.json4s.native.Serialization.write
-import scala.io.Source
-import scala.util.Random
+
 import scala.collection.JavaConversions._
 import scala.sys.process._
 import scalaj.http.Http
 import java.io.File
+
+import org.apache.predictionio.data.storage.Storage
 
 case class BuildArgs(
   sbt: Option[File] = None,
@@ -213,7 +207,7 @@ object Engine extends EitherLogging {
     serverArgs: ServerArgs,
     sparkArgs: SparkArgs,
     pioHome: String,
-    verbose: Boolean = false): Expected[(Process, () => Unit)] = {
+    verbose: Boolean = false)(implicit s: Storage): Expected[(Process, () => Unit)] = {
 
     val engineDirPath = getEngineDirPath(ea.engineDir)
     val verifyResult = Template.verifyTemplateMinVersion(
@@ -223,7 +217,7 @@ object Engine extends EitherLogging {
     }
     val ei = Console.getEngineInfo(
       new File(engineDirPath, serverArgs.variantJson.getName))
-    val engineInstances = storage.Storage.getMetaDataEngineInstances
+    val engineInstances = s.getMetaDataEngineInstances
     val engineInstance = engineInstanceId map { eid =>
       engineInstances.get(eid)
     } getOrElse {

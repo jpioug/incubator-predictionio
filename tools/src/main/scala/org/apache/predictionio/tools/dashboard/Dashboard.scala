@@ -23,8 +23,7 @@ import org.apache.predictionio.authentication.KeyAuthentication
 import org.apache.predictionio.configuration.SSLConfiguration
 import org.apache.predictionio.data.storage.Storage
 import spray.can.server.ServerSettings
-import spray.routing.directives.AuthMagnet
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.ExecutionContext
 import akka.actor.{ActorContext, Actor, ActorSystem, Props}
 import akka.io.IO
 import akka.pattern.ask
@@ -35,7 +34,6 @@ import spray.can.Http
 import spray.http._
 import spray.http.MediaTypes._
 import spray.routing._
-import spray.routing.authentication.{Authentication, UserPass, BasicAuth}
 
 import scala.concurrent.duration._
 
@@ -55,15 +53,17 @@ object Dashboard extends Logging with SSLConfiguration {
     }
 
     parser.parse(args, DashboardConfig()) map { dc =>
-      createDashboard(dc).awaitTermination
+      Storage.using { implicit s =>
+        createDashboard(dc).awaitTermination
+      }
     }
   }
 
-  def createDashboard(dc: DashboardConfig): ActorSystem = {
+  def createDashboard(dc: DashboardConfig)(implicit s: Storage): ActorSystem = {
     val systemName = "pio-dashboard"
     implicit val system = ActorSystem(systemName)
     val service =
-      system.actorOf(Props(classOf[DashboardActor], dc), "dashboard")
+      system.actorOf(Props(classOf[DashboardActor], dc, s), "dashboard")
     implicit val timeout = Timeout(5.seconds)
     val settings = ServerSettings(system)
     val serverConfig = ConfigFactory.load("server.conf")
@@ -78,7 +78,8 @@ object Dashboard extends Logging with SSLConfiguration {
 }
 
 class DashboardActor(
-    val dc: DashboardConfig)
+    val dc: DashboardConfig,
+    val s: Storage)
   extends Actor with DashboardService {
   def actorRefFactory: ActorContext = context
   def receive: Actor.Receive = runRoute(dashboardRoute)
@@ -88,7 +89,9 @@ trait DashboardService extends HttpService with KeyAuthentication with CORSSuppo
 
   implicit def executionContext: ExecutionContext = actorRefFactory.dispatcher
   val dc: DashboardConfig
-  val evaluationInstances = Storage.getMetaDataEvaluationInstances
+  val s: Storage
+
+  val evaluationInstances = s.getMetaDataEvaluationInstances
   val pioEnvVars = sys.env.filter(kv => kv._1.startsWith("PIO_"))
   val serverStartTime = DateTime.now
   val dashboardRoute =
