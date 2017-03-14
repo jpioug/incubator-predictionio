@@ -21,6 +21,7 @@ package org.apache.predictionio.controller
 import org.apache.predictionio.core.BaseEngine
 import org.apache.predictionio.core.BaseEvaluator
 import org.apache.predictionio.core.BaseEvaluatorResult
+import org.apache.predictionio.data.storage.Storage
 
 import scala.language.implicitConversions
 
@@ -89,13 +90,17 @@ trait Evaluation extends Deployment {
     * @tparam A Actual result class
     */
   def engineMetric_=[EI, Q, P, A](
-    engineMetric: (BaseEngine[EI, Q, P, A], Metric[EI, Q, P, A, _])) {
+    engineMetric: (
+      BaseEngine[EI, Q, P, A],
+      Metric[EI, Q, P, A, _])
+    )(implicit s: Storage): Unit = {
     engineEvaluator = (
       engineMetric._1,
       MetricEvaluator(
         metric = engineMetric._2,
         otherMetrics = Seq[Metric[EI, Q, P, A, _]](),
-        outputPath = "best.json"))
+        outputPath = "best.json",
+        storage = s))
   }
 
   private[predictionio]
@@ -117,9 +122,10 @@ trait Evaluation extends Deployment {
     engineMetrics: (
       BaseEngine[EI, Q, P, A],
       Metric[EI, Q, P, A, _],
-      Seq[Metric[EI, Q, P, A, _]])) {
+      Seq[Metric[EI, Q, P, A, _]])
+    )(implicit s: Storage): Unit = {
     engineEvaluator = (
       engineMetrics._1,
-      MetricEvaluator(engineMetrics._2, engineMetrics._3))
+      MetricEvaluator(engineMetrics._2, engineMetrics._3, s))
   }
 }

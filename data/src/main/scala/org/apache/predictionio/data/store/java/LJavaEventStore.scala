@@ -18,7 +18,7 @@
 
 package org.apache.predictionio.data.store.java
 
-import org.apache.predictionio.data.storage.Event
+import org.apache.predictionio.data.storage.{Event, Storage}
 import org.apache.predictionio.data.store.LEventStore
 import org.joda.time.DateTime
 
@@ -28,7 +28,9 @@ import scala.concurrent.duration.Duration
 /** This Java-friendly object provides a set of operation to access Event Store
   * without going through Spark's parallelization
   */
-object LJavaEventStore {
+class LJavaEventStore()(implicit s: Storage) {
+
+  @transient private val eventDb = new LEventStore()
 
   /** Reads events of the specified entity. May use this in Algorithm's predict()
     * or Serving logic to have fast event store access.
@@ -70,7 +72,7 @@ object LJavaEventStore {
     val limitInt = limit.map(_.intValue())
 
     JavaConversions.seqAsJavaList(
-      LEventStore.findByEntity(
+      eventDb.findByEntity(
         appName,
         entityType,
         entityId,
@@ -128,7 +130,7 @@ object LJavaEventStore {
     val limitInt = limit.map(_.intValue())
 
     JavaConversions.seqAsJavaList(
-      LEventStore.find(
+      eventDb.find(
         appName,
         entityType,
         entityId,

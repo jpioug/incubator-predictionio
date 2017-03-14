@@ -137,16 +137,14 @@ class EventSeq(val events: List[Event]) {
 class LBatchView(
   val appId: Int,
   val startTime: Option[DateTime],
-  val untilTime: Option[DateTime]) {
+  val untilTime: Option[DateTime],
+  val s: Storage) {
 
-  @transient lazy val eventsDb = Storage.getLEvents()
-
-  @transient lazy val _events = eventsDb.find(
+  @transient val events = new EventSeq(s.getLEvents().find(
     appId = appId,
     startTime = startTime,
-    untilTime = untilTime).toList
+    untilTime = untilTime).toList)
 
-  @transient lazy val events: EventSeq = new EventSeq(_events)
 
   /* Aggregate event data
    *
@@ -163,14 +161,13 @@ class LBatchView(
       ): Map[String, DataMap] = {
 
     events
-    .filter(entityTypeOpt = Some(entityType))
-    .filter(e => EventValidation.isSpecialEvents(e.event))
-    .aggregateByEntityOrdered(
-      init = None,
-      op = ViewAggregators.getDataMapAggregator())
-    .filter{ case (k, v) => (v != None) }
-    .mapValues(_.get)
-
+      .filter(entityTypeOpt = Some(entityType))
+      .filter(e => EventValidation.isSpecialEvents(e.event))
+      .aggregateByEntityOrdered(
+        init = None,
+        op = ViewAggregators.getDataMapAggregator())
+      .filter { case (k, v) => (v != None) }
+      .mapValues(_.get)
   }
 
   /*

@@ -18,9 +18,7 @@
 
 package org.apache.predictionio.workflow
 
-import java.io.PrintWriter
-import java.io.Serializable
-import java.io.StringWriter
+import java.io.{PrintWriter, Serializable, StringWriter}
 import java.util.concurrent.TimeUnit
 
 import akka.actor._
@@ -30,24 +28,15 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.github.nscala_time.time.Imports.DateTime
 import com.twitter.bijection.Injection
-import com.twitter.chill.KryoBase
-import com.twitter.chill.KryoInjection
-import com.twitter.chill.ScalaKryoInstantiator
+import com.twitter.chill.{KryoBase, KryoInjection, ScalaKryoInstantiator}
 import com.typesafe.config.ConfigFactory
 import de.javakaffee.kryoserializers.SynchronizedCollectionsSerializer
 import grizzled.slf4j.Logging
 import org.apache.predictionio.authentication.KeyAuthentication
 import org.apache.predictionio.configuration.SSLConfiguration
-import org.apache.predictionio.controller.Engine
-import org.apache.predictionio.controller.Params
-import org.apache.predictionio.controller.Utils
-import org.apache.predictionio.controller.WithPrId
-import org.apache.predictionio.core.BaseAlgorithm
-import org.apache.predictionio.core.BaseServing
-import org.apache.predictionio.core.Doer
-import org.apache.predictionio.data.storage.EngineInstance
-import org.apache.predictionio.data.storage.EngineManifest
-import org.apache.predictionio.data.storage.Storage
+import org.apache.predictionio.controller.{Engine, Params, Utils, WithPrId}
+import org.apache.predictionio.core.{BaseAlgorithm, BaseServing, Doer}
+import org.apache.predictionio.data.storage.{EngineInstance, EngineInstances, Models, Storage}
 import org.apache.predictionio.workflow.JsonExtractorOption.JsonExtractorOption
 import org.json4s._
 import org.json4s.native.JsonMethods._
@@ -58,16 +47,13 @@ import spray.http.MediaTypes._
 import spray.http._
 import spray.httpx.Json4sSupport
 import spray.routing._
-import spray.routing.authentication.{UserPass, BasicAuth}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.language.existentials
-import scala.util.Failure
-import scala.util.Random
-import scala.util.Success
+import scala.util.{Failure, Random, Success}
 import scalaj.http.HttpOptions
 
 class KryoInstantiator(classLoader: ClassLoader) extends ScalaKryoInstantiator {
@@ -114,9 +100,6 @@ case class ReloadServer()
 
 object CreateServer extends Logging {
   val actorSystem = ActorSystem("pio-server")
-  val engineInstances = Storage.getMetaDataEngineInstances
-  val engineManifests = Storage.getMetaDataEngineManifests
-  val modeldata = Storage.getModelDataModels
 
   def main(args: Array[String]): Unit = {
     val parser = new scopt.OptionParser[ServerConfig]("CreateServer") {
@@ -179,39 +162,43 @@ object CreateServer extends Logging {
 
     parser.parse(args, ServerConfig()) map { sc =>
       WorkflowUtils.modifyLogging(sc.verbose)
-      engineInstances.get(sc.engineInstanceId) map { engineInstance =>
-        val engineId = sc.engineId.getOrElse(engineInstance.engineId)
-        val engineVersion = sc.engineVersion.getOrElse(
-          engineInstance.engineVersion)
-        engineManifests.get(engineId, engineVersion) map { manifest =>
+
+      Storage.using { implicit s =>
+        val engineInstances = s.getMetaDataEngineInstances()
+        val modeldata = s.getModelDataModels()
+
+        s.getMetaDataEngineInstances().get(sc.engineInstanceId) map { engineInstance =>
+          val engineId = sc.engineId.getOrElse(engineInstance.engineId)
+          val engineVersion = sc.engineVersion.getOrElse(
+            engineInstance.engineVersion)
           val engineFactoryName = engineInstance.engineFactory
           val master = actorSystem.actorOf(Props(
             classOf[MasterActor],
             sc,
+            modeldata,
+            engineInstances,
             engineInstance,
-            engineFactoryName,
-            manifest),
-          "master")
+            engineFactoryName),
+            "master")
           implicit val timeout = Timeout(5.seconds)
           master ? StartServer()
           actorSystem.awaitTermination
         } getOrElse {
-          error(s"Invalid engine ID or version. Aborting server.")
+          error(s"Invalid engine instance ID. Aborting server.")
         }
-      } getOrElse {
-        error(s"Invalid engine instance ID. Aborting server.")
       }
     }
   }
 
   def createServerActorWithEngine[TD, EIN, PD, Q, P, A](
     sc: ServerConfig,
+    modeldata: Models,
     engineInstance: EngineInstance,
     engine: Engine[TD, EIN, PD, Q, P, A],
-    engineLanguage: EngineLanguage.Value,
-    manifest: EngineManifest): ActorRef = {
+    engineLanguage: EngineLanguage.Value): ActorRef = {
 
-    val engineParams = engine.engineInstanceToEngineParams(engineInstance, sc.jsonExtractor)
+    val engineParams = engine.engineInstanceToEngineParams(
+      engineInstance, sc.jsonExtractor)
 
     val kryo = KryoInstantiator.newKryoInjection
 
@@ -255,7 +242,6 @@ object CreateServer extends Logging {
         engineInstance,
         engine,
         engineLanguage,
-        manifest,
         engineParams.dataSourceParams._2,
         engineParams.preparatorParams._2,
         algorithms,
@@ -268,9 +254,10 @@ object CreateServer extends Logging {
 
 class MasterActor (
     sc: ServerConfig,
+    modeldata: Models,
+    engineInstances: EngineInstances,
     engineInstance: EngineInstance,
-    engineFactoryName: String,
-    manifest: EngineManifest) extends Actor with SSLConfiguration with KeyAuthentication {
+    engineFactoryName: String) extends Actor with SSLConfiguration with KeyAuthentication {
   val log = Logging(context.system, this)
   implicit val system = context.system
   var sprayHttpListener: Option[ActorRef] = None
@@ -290,7 +277,7 @@ class MasterActor (
         .param(ServerKey.param, ServerKey.get)
         .method("POST").asString.code
       code match {
-        case 200 => Unit
+        case 200 => ()
         case 404 => log.error(
           s"Another process is using $serverUrl. Unable to undeploy.")
         case _ => log.error(
@@ -311,9 +298,9 @@ class MasterActor (
     case x: StartServer =>
       val actor = createServerActor(
         sc,
+        modeldata,
         engineInstance,
-        engineFactoryName,
-        manifest)
+        engineFactoryName)
       currentServerActor = Some(actor)
       undeploy(sc.ip, sc.port)
       self ! BindServer()
@@ -340,12 +327,12 @@ class MasterActor (
     case x: ReloadServer =>
       log.info("Reload server command received.")
       val latestEngineInstance =
-        CreateServer.engineInstances.getLatestCompleted(
-          manifest.id,
-          manifest.version,
+        engineInstances.getLatestCompleted(
+          engineInstance.engineId,
+          engineInstance.engineVersion,
           engineInstance.engineVariant)
       latestEngineInstance map { lr =>
-        val actor = createServerActor(sc, lr, engineFactoryName, manifest)
+        val actor = createServerActor(sc, modeldata, lr, engineFactoryName)
         sprayHttpListener.map { l =>
           l ! Http.Unbind(5.seconds)
           val settings = ServerSettings(system)
@@ -361,8 +348,8 @@ class MasterActor (
         }
       } getOrElse {
         log.warning(
-          s"No latest completed engine instance for ${manifest.id} " +
-          s"${manifest.version}. Abort reloading.")
+          s"No latest completed engine instance for ${engineInstance.engineId} " +
+          s"${engineInstance.engineVersion}. Abort reloading.")
       }
     case x: Http.Bound =>
       val serverUrl = s"${protocol}${sc.ip}:${sc.port}"
@@ -383,9 +370,9 @@ class MasterActor (
 
   def createServerActor(
       sc: ServerConfig,
+      modeldata: Models,
       engineInstance: EngineInstance,
-      engineFactoryName: String,
-      manifest: EngineManifest): ActorRef = {
+      engineFactoryName: String): ActorRef = {
     val (engineLanguage, engineFactory) =
       WorkflowUtils.getEngine(engineFactoryName, getClass.getClassLoader)
     val engine = engineFactory()
@@ -399,11 +386,10 @@ class MasterActor (
 
     CreateServer.createServerActorWithEngine(
       sc,
+      modeldata,
       engineInstance,
-      // engine,
       deployableEngine,
-      engineLanguage,
-      manifest)
+      engineLanguage)
   }
 }
 
@@ -412,7 +398,6 @@ class ServerActor[Q, P](
     val engineInstance: EngineInstance,
     val engine: Engine[_, _, _, Q, P, _],
     val engineLanguage: EngineLanguage.Value,
-    val manifest: EngineManifest,
     val dataSourceParams: Params,
     val preparatorParams: Params,
     val algorithms: Seq[BaseAlgorithm[_, _, Q, P]],
@@ -474,7 +459,6 @@ class ServerActor[Q, P](
             complete {
               html.index(
                 args,
-                manifest,
                 engineInstance,
                 algorithms.map(_.toString),
                 algorithmsParams.map(_.toString),

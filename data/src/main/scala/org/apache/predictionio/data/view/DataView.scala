@@ -19,11 +19,9 @@
 package org.apache.predictionio.data.view
 
 import org.apache.predictionio.annotation.Experimental
-import org.apache.predictionio.data.storage.Event
-
+import org.apache.predictionio.data.storage.{Event, Storage}
 import grizzled.slf4j.Logger
 import org.apache.predictionio.data.store.PEventStore
-
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SaveMode
@@ -36,7 +34,10 @@ import scala.util.hashing.MurmurHash3
 
 /** :: Experimental :: */
 @Experimental
-object DataView {
+class DataView()(implicit s: Storage) {
+
+  @transient private val eventDb = new PEventStore()
+
   /**
     * :: Experimental ::
     *
@@ -90,7 +91,7 @@ object DataView {
       case e: java.io.FileNotFoundException =>
         logger.info("Cached copy not found, reading from DB.")
         // if cached copy is found, use it. If not, grab from Storage
-        val result: RDD[E] = PEventStore.find(
+        val result: RDD[E] = eventDb.find(
             appName = appName,
             channelName = channelName,
             startTime = startTime,

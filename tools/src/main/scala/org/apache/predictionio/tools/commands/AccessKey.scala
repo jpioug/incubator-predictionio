@@ -18,23 +18,20 @@
 package org.apache.predictionio.tools.commands
 
 import org.apache.predictionio.data.storage
-import org.apache.predictionio.tools
 import org.apache.predictionio.tools.EitherLogging
 import org.apache.predictionio.tools.ReturnTypes._
-
-import grizzled.slf4j.Logging
-import scala.util.Either
+import org.apache.predictionio.data.storage.Storage
 
 object AccessKey extends EitherLogging {
 
   def create(
     appName: String,
     key: String,
-    events: Seq[String]): Expected[storage.AccessKey] = {
+    events: Seq[String])(implicit s: Storage): Expected[storage.AccessKey] = {
 
-    val apps = storage.Storage.getMetaDataApps
+    val apps = s.getMetaDataApps
     apps.getByName(appName) map { app =>
-      val accessKeys = storage.Storage.getMetaDataAccessKeys
+      val accessKeys = s.getMetaDataAccessKeys
       val newKey = storage.AccessKey(
         key = key,
         appid = app.id,
@@ -50,16 +47,17 @@ object AccessKey extends EitherLogging {
     }
   }
 
-  def list(app: Option[String]): Expected[Seq[storage.AccessKey]] =
+  def list(app: Option[String])(implicit s: Storage):
+      Expected[Seq[storage.AccessKey]] =
     app map { appName =>
       App.show(appName).right map { appChansPair => appChansPair._1.keys }
     } getOrElse {
-      Right(storage.Storage.getMetaDataAccessKeys.getAll)
+      Right(s.getMetaDataAccessKeys.getAll)
     }
 
-  def delete(key: String): MaybeError = {
+  def delete(key: String)(implicit s: Storage): MaybeError = {
     try {
-      storage.Storage.getMetaDataAccessKeys.delete(key)
+      s.getMetaDataAccessKeys.delete(key)
       logAndSucceed(s"Deleted access key ${key}.")
     } catch {
       case e: Exception =>

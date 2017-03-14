@@ -18,12 +18,9 @@
 
 package org.apache.predictionio.data.storage
 
-import java.lang.reflect.InvocationTargetException
-
 import grizzled.slf4j.Logging
 import org.apache.predictionio.annotation.DeveloperApi
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.language.existentials
 import scala.reflect.runtime.universe._
 
@@ -50,6 +47,8 @@ trait BaseStorageClient {
     * of [[Apps]], it will try to look for a class named ''JDBCApps''.
     */
   val prefix: String = ""
+
+  def close(): Unit = ()
 }
 
 /** :: DeveloperApi ::
@@ -109,16 +108,7 @@ class StorageException(message: String, cause: Throwable)
   def this(message: String) = this(message, null)
 }
 
-/** Backend-agnostic data storage layer with lazy initialization. Use this
-  * object when you need to interface with Event Store in your engine.
-  *
-  * @group Storage System
-  */
 object Storage extends Logging {
-  private case class ClientMeta(
-    sourceType: String,
-    client: BaseStorageClient,
-    config: StorageClientConfig)
 
   private case class DataObjectMeta(sourceName: String, namespace: String)
 
@@ -136,8 +126,6 @@ object Storage extends Logging {
   }
 
   if (sourceKeys.size == 0) warn("There is no properly configured data source.")
-
-  private val s2cm = scala.collection.mutable.Map[String, Option[ClientMeta]]()
 
   /** Reference to the app data repository. */
   private val EventDataRepository = "EVENTDATA"
@@ -195,8 +183,6 @@ object Storage extends Logging {
     sys.exit(errors)
   }
 
-  // End of constructor and field definitions and begin method definitions
-
   private def prefixPath(prefix: String, body: String) = s"${prefix}_$body"
 
   private def sourcesPrefixPath(body: String) = prefixPath(sourcesPrefix, body)
@@ -204,13 +190,31 @@ object Storage extends Logging {
   private def repositoriesPrefixPath(body: String) =
     prefixPath(repositoriesPrefix, body)
 
-  private def sourcesToClientMeta(
-      source: String,
-      parallel: Boolean,
-      test: Boolean): Option[ClientMeta] = {
-    val sourceName = if (parallel) s"parallel-$source" else source
-    s2cm.getOrElseUpdate(sourceName, updateS2CM(source, parallel, test))
+  def using[T](f: (Storage) => T): T = {
+    val s = new Storage()
+    try {
+      f(s)
+    } finally {
+      s.close()
+    }
   }
+
+}
+
+
+/** Backend-agnostic data storage layer with lazy initialization. Use this
+  * object when you need to interface with Event Store in your engine.
+  *
+  * @group Storage System
+  */
+class Storage private() extends Logging {
+  private case class ClientMeta(
+    sourceType: String,
+    client: BaseStorageClient,
+    config: StorageClientConfig)
+  import Storage._
+
+  private val s2cm = scala.collection.mutable.Map[String, Option[ClientMeta]]()
 
   private def getClient(
     clientConfig: StorageClientConfig,
@@ -231,10 +235,7 @@ object Storage extends Logging {
 
   /** Get the StorageClient config data from PIO Framework's environment variables */
   def getConfig(sourceName: String): Option[StorageClientConfig] = {
-    if (s2cm.contains(sourceName) && s2cm.get(sourceName).nonEmpty
-      && s2cm.get(sourceName).get.nonEmpty) {
-      Some(s2cm.get(sourceName).get.get.config)
-    } else None
+    s2cm.get(sourceName).flatMap(_.map(_.config))
   }
 
   private def updateS2CM(k: String, parallel: Boolean, test: Boolean):
@@ -273,12 +274,16 @@ object Storage extends Logging {
     getPDataObject[T](repoDOSourceName, repoDOMeta.namespace)
   }
 
-  private[predictionio] def getDataObject[T](
+  private def getDataObject[T](
       sourceName: String,
       namespace: String,
       parallel: Boolean = false,
       test: Boolean = false)(implicit tag: TypeTag[T]): T = {
-    val clientMeta = sourcesToClientMeta(sourceName, parallel, test) getOrElse {
+
+    val source = if (parallel) s"parallel-$sourceName" else sourceName
+
+    val clientMeta = s2cm.getOrElseUpdate(
+      source, updateS2CM(sourceName, parallel, test)).getOrElse {
       throw new StorageClientException(
         s"Data source $sourceName was not properly initialized.", null)
     }
@@ -335,63 +340,96 @@ object Storage extends Logging {
     Seq(client.client, client.config, namespace)
   }
 
-  private[predictionio] def verifyAllDataObjects(): Unit = {
-    info("Verifying Meta Data Backend (Source: " +
-      s"${repositoriesToDataObjectMeta(MetaDataRepository).sourceName})...")
-    getMetaDataEngineManifests()
-    getMetaDataEngineInstances()
-    getMetaDataEvaluationInstances()
-    getMetaDataApps()
-    getMetaDataAccessKeys()
-    info("Verifying Model Data Backend (Source: " +
-      s"${repositoriesToDataObjectMeta(ModelDataRepository).sourceName})...")
-    getModelDataModels()
-    info("Verifying Event Data Backend (Source: " +
-      s"${repositoriesToDataObjectMeta(EventDataRepository).sourceName})...")
-    val eventsDb = getLEvents(test = true)
-    info("Test writing to Event Store (App Id 0)...")
-    // use appId=0 for testing purpose
-    eventsDb.init(0)
-    eventsDb.insert(Event(
-      event = "test",
-      entityType = "test",
-      entityId = "test"), 0)
-    eventsDb.remove(0)
-    eventsDb.close()
-  }
-
-  private[predictionio] def getMetaDataEngineManifests(): EngineManifests =
-    getDataObjectFromRepo[EngineManifests](MetaDataRepository)
-
-  private[predictionio] def getMetaDataEngineInstances(): EngineInstances =
+  private val engineInstances: EngineInstances =
     getDataObjectFromRepo[EngineInstances](MetaDataRepository)
+  private val evaluationInstances: EvaluationInstances =
+    getDataObjectFromRepo[EvaluationInstances](MetaDataRepository)
+  private val apps: Apps =
+    getDataObjectFromRepo[Apps](MetaDataRepository)
+  private val accessKeys: AccessKeys =
+    getDataObjectFromRepo[AccessKeys](MetaDataRepository)
+  private val models: Models =
+    getDataObjectFromRepo[Models](ModelDataRepository)
+  private val channels: Channels =
+    getDataObjectFromRepo[Channels](MetaDataRepository)
+  private val levents: LEvents =
+    getDataObjectFromRepo[LEvents](EventDataRepository)
+  private val pevents: PEvents =
+    getDataObjectFromRepo[PEvents](EventDataRepository)
+
+//  private[predictionio] def initAllDataObjects(): Unit = {
+//    info("Verifying Meta Data Backend (Source: " +
+//      s"${repositoriesToDataObjectMeta(MetaDataRepository).sourceName})...")
+//
+//    engineInstances = initMetaDataEngineInstances()
+//    evaluationInstances = initMetaDataEvaluationInstances()
+//    apps = initMetaDataApps()
+//    accessKeys = initMetaDataAccessKeys()
+//
+//    info("Verifying Model Data Backend (Source: " +
+//      s"${repositoriesToDataObjectMeta(ModelDataRepository).sourceName})...")
+//    models = initModelDataModels()
+//    info("Verifying Event Data Backend (Source: " +
+//      s"${repositoriesToDataObjectMeta(EventDataRepository).sourceName})...")
+//    eventsDb = initLEvents(test = true)
+//    info("Test writing to Event Store (App Id 0)...")
+//    // use appId=0 for testing purpose
+//    eventsDb.init(0)
+//    eventsDb.insert(Event(
+//      event = "test",
+//      entityType = "test",
+//      entityId = "test"), 0)
+//    eventsDb.remove(0)
+//    eventsDb.close()
+//  }
+//
+//  private[predictionio] def initMetaDataEngineInstances(): EngineInstances =
+//    getDataObjectFromRepo[EngineInstances](MetaDataRepository)
+//
+//  private[predictionio] def initMetaDataEvaluationInstances(): EvaluationInstances =
+//    getDataObjectFromRepo[EvaluationInstances](MetaDataRepository)
+//
+//  private[predictionio] def initMetaDataApps(): Apps =
+//    getDataObjectFromRepo[Apps](MetaDataRepository)
+//
+//  private[predictionio] def initMetaDataAccessKeys(): AccessKeys =
+//    getDataObjectFromRepo[AccessKeys](MetaDataRepository)
+//
+//  private[predictionio] def initMetaDataChannels(): Channels =
+//    getDataObjectFromRepo[Channels](MetaDataRepository)
+//
+//  private[predictionio] def initModelDataModels(): Models =
+//    getDataObjectFromRepo[Models](ModelDataRepository)
+
+
+  private[predictionio] def getMetaDataEngineInstances(): EngineInstances = engineInstances
 
   private[predictionio] def getMetaDataEvaluationInstances(): EvaluationInstances =
-    getDataObjectFromRepo[EvaluationInstances](MetaDataRepository)
+    evaluationInstances
 
-  private[predictionio] def getMetaDataApps(): Apps =
-    getDataObjectFromRepo[Apps](MetaDataRepository)
+  private[predictionio] def getMetaDataApps(): Apps = apps
 
-  private[predictionio] def getMetaDataAccessKeys(): AccessKeys =
-    getDataObjectFromRepo[AccessKeys](MetaDataRepository)
+  private[predictionio] def getMetaDataAccessKeys(): AccessKeys = accessKeys
 
-  private[predictionio] def getMetaDataChannels(): Channels =
-    getDataObjectFromRepo[Channels](MetaDataRepository)
+  private[predictionio] def getMetaDataChannels(): Channels = channels
 
-  private[predictionio] def getModelDataModels(): Models =
-    getDataObjectFromRepo[Models](ModelDataRepository)
+  private[predictionio] def getModelDataModels(): Models = models
 
-  /** Obtains a data access object that returns [[Event]] related local data
-    * structure.
-    */
-  def getLEvents(test: Boolean = false): LEvents =
-    getDataObjectFromRepo[LEvents](EventDataRepository, test = test)
+  private[predictionio] def getLEvents(): LEvents = levents
 
-  /** Obtains a data access object that returns [[Event]] related RDD data
-    * structure.
-    */
-  def getPEvents(): PEvents =
-    getPDataObject[PEvents](EventDataRepository)
+  private[predictionio] def getPEvents(): PEvents = pevents
+
+//  /** Obtains a data access object that returns [[Event]] related local data
+//    * structure.
+//    */
+//  def initLEvents(test: Boolean = false): LEvents =
+//    getDataObjectFromRepo[LEvents](EventDataRepository, test = test)
+//
+//  /** Obtains a data access object that returns [[Event]] related RDD data
+//    * structure.
+//    */
+//  def initPEvents(): PEvents =
+//    getPDataObject[PEvents](EventDataRepository)
 
   def config: Map[String, Map[String, Map[String, String]]] = Map(
     "sources" -> s2cm.toMap.map { case (source, clientMeta) =>
@@ -403,4 +441,11 @@ object Storage extends Logging {
       }.getOrElse(Map.empty)
     }
   )
+
+  private def close(): Unit = {
+    s2cm.foreach { case (_, clientMeta) =>
+      clientMeta.foreach(_.client.close())
+    }
+  }
+
 }

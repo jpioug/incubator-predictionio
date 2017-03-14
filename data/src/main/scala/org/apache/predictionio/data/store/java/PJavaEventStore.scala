@@ -18,8 +18,7 @@
 
 package org.apache.predictionio.data.store.java
 
-import org.apache.predictionio.data.storage.Event
-import org.apache.predictionio.data.storage.PropertyMap
+import org.apache.predictionio.data.storage.{Event, PropertyMap, Storage}
 import org.apache.predictionio.data.store.PEventStore
 import org.apache.spark.SparkContext
 import org.apache.spark.api.java.JavaRDD
@@ -30,7 +29,9 @@ import scala.collection.JavaConversions
 /** This Java-friendly object provides a set of operation to access Event Store
   * with Spark's parallelization
   */
-object PJavaEventStore {
+class PJavaEventStore()(implicit s: Storage) {
+
+  @transient private val eventDb = new PEventStore()
 
   /** Read events from Event Store
     *
@@ -66,7 +67,7 @@ object PJavaEventStore {
 
     val eventNamesSeq = eventNames.map(JavaConversions.asScalaBuffer(_).toSeq)
 
-    PEventStore.find(
+    eventDb.find(
       appName,
       channelName,
       startTime,
@@ -100,12 +101,12 @@ object PJavaEventStore {
     required: Option[java.util.List[String]],
     sc: SparkContext): JavaRDD[(String, PropertyMap)] = {
 
-    PEventStore.aggregateProperties(
+    eventDb.aggregateProperties(
       appName,
-    entityType,
-    channelName,
-    startTime,
-    untilTime
+      entityType,
+      channelName,
+      startTime,
+      untilTime
     )(sc)
   }
 

@@ -15,18 +15,15 @@
  * limitations under the License.
  */
 
-
 package org.apache.predictionio.tools
 
 import java.io.File
 import java.net.URI
 
-import org.apache.predictionio.tools.console.ConsoleArgs
-import org.apache.predictionio.workflow.WorkflowUtils
-import org.apache.predictionio.tools.ReturnTypes._
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.predictionio.tools.ReturnTypes._
+import org.apache.predictionio.workflow.WorkflowUtils
 
 import scala.sys.process._
 
@@ -76,7 +73,7 @@ object Runner extends EitherLogging {
     (fs, uri) match {
       case (Some(f), Some(u)) =>
         f.close()
-      case _ => Unit
+      case _ => ()
     }
   }
 
@@ -117,7 +114,7 @@ object Runner extends EitherLogging {
       case (_, "cluster", m) if m.startsWith("spark://") =>
         return logAndFail(
           "Using cluster deploy mode with Spark standalone cluster is not supported")
-      case _ => Unit
+      case _ => ()
     }
 
     // Initialize HDFS API for scratch URI
@@ -163,8 +160,10 @@ object Runner extends EitherLogging {
     val sparkSubmitCommand =
       Seq(Seq(sparkHome, "bin", "spark-submit").mkString(File.separator))
 
-    val sparkSubmitJars = if (extraJars.nonEmpty) {
-      Seq("--jars", deployedJars.map(_.toString).mkString(","))
+    val sparkSubmitJarsList = WorkflowUtils.thirdPartyJars ++ deployedJars ++
+      Common.jarFilesForSpark(pioHome).map(_.toURI)
+    val sparkSubmitJars = if (sparkSubmitJarsList.nonEmpty) {
+      Seq("--jars", sparkSubmitJarsList.map(_.toString).mkString(","))
     } else {
       Nil
     }

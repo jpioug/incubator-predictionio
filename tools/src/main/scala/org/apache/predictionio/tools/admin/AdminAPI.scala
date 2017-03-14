@@ -35,7 +35,7 @@ import spray.routing._
 
 import scala.concurrent.ExecutionContext
 
-class AdminServiceActor(val commandClient: CommandClient)
+class AdminServiceActor(val commandClient: CommandClient)(implicit storage: Storage)
   extends HttpServiceActor {
 
   object Json4sProtocol extends Json4sSupport {
@@ -108,10 +108,10 @@ class AdminServiceActor(val commandClient: CommandClient)
   def receive: Actor.Receive = runRoute(route)
 }
 
-class AdminServerActor(val commandClient: CommandClient) extends Actor {
+class AdminServerActor(val commandClient: CommandClient, storage: Storage) extends Actor {
   val log = Logging(context.system, this)
   val child = context.actorOf(
-    Props(classOf[AdminServiceActor], commandClient),
+    Props(classOf[AdminServiceActor], commandClient, storage),
     "AdminServiceActor")
 
   implicit val system = context.system
@@ -133,17 +133,17 @@ case class AdminServerConfig(
 )
 
 object AdminServer {
-  def createAdminServer(config: AdminServerConfig): ActorSystem = {
+  def createAdminServer(config: AdminServerConfig)(implicit s: Storage): ActorSystem = {
     implicit val system = ActorSystem("AdminServerSystem")
 
     val commandClient = new CommandClient(
-      appClient = Storage.getMetaDataApps,
-      accessKeyClient = Storage.getMetaDataAccessKeys,
-      eventClient = Storage.getLEvents()
+      appClient = s.getMetaDataApps,
+      accessKeyClient = s.getMetaDataAccessKeys,
+      eventClient = s.getLEvents()
     )
 
     val serverActor = system.actorOf(
-      Props(classOf[AdminServerActor], commandClient),
+      Props(classOf[AdminServerActor], commandClient, s),
       "AdminServerActor")
     serverActor ! StartServer(config.ip, config.port)
     system
@@ -152,9 +152,10 @@ object AdminServer {
 
 object AdminRun {
   def main (args: Array[String]) {
-    AdminServer.createAdminServer(AdminServerConfig(
-      ip = "localhost",
-      port = 7071))
-    .awaitTermination
+    Storage.using { implicit s =>
+      AdminServer.createAdminServer(
+        AdminServerConfig(ip = "localhost", port = 7071)
+      ).awaitTermination
+    }
   }
 }

@@ -21,6 +21,7 @@ package org.apache.predictionio.controller.java
 import org.apache.predictionio.controller.Evaluation
 import org.apache.predictionio.controller.Metric
 import org.apache.predictionio.core.BaseEngine
+import org.apache.predictionio.data.storage.Storage
 
 import scala.collection.JavaConversions.asScalaBuffer
 
@@ -44,7 +45,8 @@ abstract class JavaEvaluation extends Evaluation {
     */
   def setEngineMetric[EI, Q, P, A](
     baseEngine: BaseEngine[EI, Q, P, A],
-    metric: Metric[EI, Q, P, A, _]) {
+    metric: Metric[EI, Q, P, A, _]
+  )(implicit s: Storage): Unit = {
 
     engineMetric = (baseEngine, metric)
   }
@@ -62,7 +64,8 @@ abstract class JavaEvaluation extends Evaluation {
   def setEngineMetrics[EI, Q, P, A](
     baseEngine: BaseEngine[EI, Q, P, A],
     metric: Metric[EI, Q, P, A, _],
-    metrics: java.util.List[_ <: Metric[EI, Q, P, A, _]]) {
+    metrics: java.util.List[_ <: Metric[EI, Q, P, A, _]]
+  )(implicit s: Storage): Unit =  {
 
     engineMetrics = (baseEngine, metric, asScalaBuffer(metrics))
   }

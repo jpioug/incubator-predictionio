@@ -18,11 +18,7 @@ limitations under the License.
 -->
 <configuration>
   <property>
-    <name>hbase.rootdir</name>
-    <value>file:///hbase-files/data</value>
-  </property>
-  <property>
-    <name>hbase.zookeeper.property.dataDir</name>
-    <value>/hbase-files/zookeeper</value>
+    <name>hbase.zookeeper.quorum</name>
+    <value>hbase</value>
   </property>
 </configuration>

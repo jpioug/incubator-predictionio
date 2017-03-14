@@ -18,13 +18,13 @@
 package org.apache.predictionio.tools.commands
 
 import org.apache.predictionio.data.storage
-import org.apache.predictionio.data.storage.Channel
+import org.apache.predictionio.data.storage.{Channel, Storage}
 import org.apache.predictionio.tools.EitherLogging
 import org.apache.predictionio.tools.ReturnTypes._
 
 sealed case class AppDescription(
-  app: storage.App,
-  keys: Seq[storage.AccessKey])
+  app: org.apache.predictionio.data.storage.App,
+  keys: Seq[org.apache.predictionio.data.storage.AccessKey])
 
 object App extends EitherLogging {
 
@@ -32,11 +32,11 @@ object App extends EitherLogging {
     name: String,
     id: Option[Int] = None,
     description: Option[String] = None,
-    accessKey: String = "") : Expected[AppDescription] = {
+    accessKey: String = "")(implicit s: Storage) : Expected[AppDescription] = {
 
-    val apps = storage.Storage.getMetaDataApps()
+    val apps = s.getMetaDataApps()
     // get the client in the beginning so error exit right away if can't access client
-    val events = storage.Storage.getLEvents()
+    val events = s.getLEvents()
     var errStr = ""
 
     apps.getByName(name) map { app =>
@@ -63,7 +63,7 @@ object App extends EitherLogging {
         val dbInit = events.init(id)
         val r = if (dbInit) {
           info(s"Initialized Event Store for this app ID: ${id}.")
-          val accessKeys = storage.Storage.getMetaDataAccessKeys
+          val accessKeys = s.getMetaDataAccessKeys
           val newKey = storage.AccessKey(
             key = accessKey,
             appid = id,
@@ -97,9 +97,9 @@ object App extends EitherLogging {
     }
   }
 
-  def list: Seq[AppDescription] = {
-    val apps = storage.Storage.getMetaDataApps.getAll().sortBy(_.name)
-    val accessKeys = storage.Storage.getMetaDataAccessKeys
+  def list()(implicit s: Storage): Seq[AppDescription] = {
+    val apps = s.getMetaDataApps.getAll().sortBy(_.name)
+    val accessKeys = s.getMetaDataAccessKeys
 
     apps map { app =>
       AppDescription(
@@ -108,10 +108,10 @@ object App extends EitherLogging {
     }
   }
 
-  def show(appName: String): Expected[(AppDescription, Seq[Channel])] = {
-    val apps = storage.Storage.getMetaDataApps
-    val accessKeys = storage.Storage.getMetaDataAccessKeys
-    val channels = storage.Storage.getMetaDataChannels
+  def show(appName: String)(implicit s: Storage): Expected[(AppDescription, Seq[Channel])] = {
+    val apps = s.getMetaDataApps
+    val accessKeys = s.getMetaDataAccessKeys
+    val channels = s.getMetaDataChannels
 
     apps.getByName(appName) map { app =>
       Right(
@@ -125,8 +125,8 @@ object App extends EitherLogging {
     }
   }
 
-  def delete(name: String): MaybeError = {
-    val events = storage.Storage.getLEvents()
+  def delete(name: String)(implicit s: Storage): MaybeError = {
+    val events = s.getLEvents()
     try {
       show(name).right.flatMap { case (appDesc: AppDescription, channels: Seq[Channel]) =>
 
@@ -135,7 +135,7 @@ object App extends EitherLogging {
             if (events.remove(appDesc.app.id, Some(ch.id))) {
               info(s"Removed Event Store of the channel ID: ${ch.id}")
               try {
-                storage.Storage.getMetaDataChannels.delete(ch.id)
+                s.getMetaDataChannels.delete(ch.id)
                 info(s"Deleted channel ${ch.name}")
                 None
               } catch {
@@ -168,7 +168,7 @@ object App extends EitherLogging {
 
           appDesc.keys foreach { key =>
             try {
-              storage.Storage.getMetaDataAccessKeys.delete(key.key)
+              s.getMetaDataAccessKeys.delete(key.key)
               info(s"Removed access key ${key.key}")
             } catch {
               case e: Exception =>
@@ -177,7 +177,7 @@ object App extends EitherLogging {
           }
 
           try {
-            storage.Storage.getMetaDataApps.delete(appDesc.app.id)
+            s.getMetaDataApps.delete(appDesc.app.id)
             info(s"Deleted app ${appDesc.app.name}.")
           } catch {
             case e: Exception =>
@@ -194,10 +194,10 @@ object App extends EitherLogging {
   def dataDelete(
     name: String,
     channel: Option[String] = None,
-    all: Boolean = false): MaybeError = {
+    all: Boolean = false)(implicit s: Storage): MaybeError = {
 
     var errStr = ""
-    val events = storage.Storage.getLEvents()
+    val events = s.getLEvents()
     try {
       show(name).right.flatMap { case (appDesc: AppDescription, channels: Seq[Channel]) =>
 
@@ -264,19 +264,19 @@ object App extends EitherLogging {
     }
   }
 
-  def channelNew(appName: String, newChannel: String): Expected[Channel] = {
-    val events = storage.Storage.getLEvents()
-    val chanStorage = storage.Storage.getMetaDataChannels
+  def channelNew(appName: String, newChannel: String)(implicit s: Storage): Expected[Channel] = {
+    val events = s.getLEvents()
+    val chanStorage = s.getMetaDataChannels
     var errStr = ""
     try {
       show(appName).right flatMap { case (appDesc: AppDescription, channels: Seq[Channel]) =>
         if (channels.find(ch => ch.name == newChannel).isDefined) {
           logAndFail(s"""Channel ${newChannel} already exists.
                       |Unable to create new channel.""")
-        } else if (!storage.Channel.isValidName(newChannel)) {
+        } else if (!org.apache.predictionio.data.storage.Channel.isValidName(newChannel)) {
           logAndFail(s"""Unable to create new channel.
                       |The channel name ${newChannel} is invalid.
-                      |${storage.Channel.nameConstraint}""")
+                      |${org.apache.predictionio.data.storage.Channel.nameConstraint}""")
         } else {
 
           val channel = Channel(
@@ -326,37 +326,38 @@ object App extends EitherLogging {
     }
   }
 
-  def channelDelete(appName: String, deleteChannel: String): MaybeError = {
-    val chanStorage = storage.Storage.getMetaDataChannels
-    val events = storage.Storage.getLEvents()
+  def channelDelete(appName: String, deleteChannel: String)(implicit s: Storage): MaybeError = {
+    val chanStorage = s.getMetaDataChannels
+    val events = s.getLEvents()
     var errStr = ""
     try {
-      show(appName).right.flatMap { case (appDesc: AppDescription, channels: Seq[Channel]) =>
-        val foundChannel = channels.find(ch => ch.name == deleteChannel)
-        if (foundChannel.isEmpty) {
-          logAndFail(s"""Unable to delete channel
-                        |Channel ${deleteChannel} doesn't exists.""")
-        } else {
-          val chId = foundChannel.get.id
-          val dbRemoved = events.remove(appDesc.app.id, Some(chId))
-          if (dbRemoved) {
-            info(s"Removed Event Store for this channel: ${deleteChannel}")
-            try {
-              chanStorage.delete(chId)
-              logAndSucceed(s"Deleted channel: ${deleteChannel}.")
-            } catch {
-              case e: Exception =>
-                logAndFail(s"""Unable to delete channel.
-                  |Failed to update Channel meta-data.
-                  |The channel ${deleteChannel} CANNOT be used!
-                  |Please run 'pio app channel-delete ${appDesc.app.name} ${deleteChannel}'""" +
-                  " to delete this channel again!")
-            }
+      show(appName).right.flatMap {
+        case (appDesc: AppDescription, channels: Seq[Channel]) =>
+          val foundChannel = channels.find(ch => ch.name == deleteChannel)
+          if (foundChannel.isEmpty) {
+            logAndFail(s"""Unable to delete channel
+                          |Channel ${deleteChannel} doesn't exists.""")
           } else {
-            logAndFail(s"""Unable to delete channel.
-                          |Error removing Event Store for this channel.""")
+            val chId = foundChannel.get.id
+            val dbRemoved = events.remove(appDesc.app.id, Some(chId))
+            if (dbRemoved) {
+              info(s"Removed Event Store for this channel: ${deleteChannel}")
+              try {
+                chanStorage.delete(chId)
+                logAndSucceed(s"Deleted channel: ${deleteChannel}.")
+              } catch {
+                case e: Exception =>
+                  logAndFail(s"""Unable to delete channel.
+                    |Failed to update Channel meta-data.
+                    |The channel ${deleteChannel} CANNOT be used!
+                    |Please run 'pio app channel-delete ${appDesc.app.name} ${deleteChannel}'""" +
+                    " to delete this channel again!")
+              }
+            } else {
+              logAndFail(s"""Unable to delete channel.
+                            |Error removing Event Store for this channel.""")
+            }
           }
-        }
       }
     } finally {
       events.close()

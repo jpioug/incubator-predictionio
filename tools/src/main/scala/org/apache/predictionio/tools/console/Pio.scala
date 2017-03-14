@@ -17,27 +17,20 @@
 
 package org.apache.predictionio.tools.console
 
-import org.apache.predictionio.tools.{
-  EventServerArgs, SparkArgs, WorkflowArgs, ServerArgs, DeployArgs}
+import org.apache.predictionio.tools.{DeployArgs, EventServerArgs, ServerArgs, SparkArgs, WorkflowArgs}
 import org.apache.predictionio.tools.commands.Management
-import org.apache.predictionio.tools.commands.{
-  DashboardArgs, AdminServerArgs, ImportArgs, ExportArgs,
-  BuildArgs, EngineArgs, AppDescription}
+import org.apache.predictionio.tools.commands.{AdminServerArgs, AppDescription, BuildArgs, DashboardArgs, EngineArgs, ExportArgs, ImportArgs}
 import org.apache.predictionio.tools.commands.Engine
-import org.apache.predictionio.tools.commands.{
-  App => AppCmd, AccessKey => AccessKeysCmd}
+import org.apache.predictionio.tools.commands.{AccessKey => AccessKeysCmd, App => AppCmd}
 import org.apache.predictionio.tools.ReturnTypes._
 import org.apache.predictionio.tools.commands.Import
 import org.apache.predictionio.tools.commands.Export
-
 import grizzled.slf4j.Logging
-import scala.concurrent.{Future, ExecutionContext, Await}
-import scala.concurrent.duration._
+
 import scala.language.implicitConversions
 import scala.sys.process._
-import java.io.File
 
-import akka.actor.ActorSystem
+import org.apache.predictionio.data.storage.Storage
 
 object Pio extends Logging {
 
@@ -75,18 +68,16 @@ object Pio extends Logging {
   }
 
   def build(
+    ea: EngineArgs,
     buildArgs: BuildArgs,
     pioHome: String,
-    manifestJson: File,
     verbose: Boolean = false): Int = {
 
-    doOnSuccess(Engine.build(buildArgs, pioHome, manifestJson, verbose)) {
+    doOnSuccess(Engine.build(ea, buildArgs, pioHome, verbose)) {
       _ => info("Your engine is ready for training.")
       0
     }
   }
-
-  def unregister(manifestJson: File): Int = Engine.unregister(manifestJson)
 
   def train(
     ea: EngineArgs,
@@ -110,38 +101,38 @@ object Pio extends Logging {
     serverArgs: ServerArgs,
     sparkArgs: SparkArgs,
     pioHome: String,
-    verbose: Boolean = false): Int =
+    verbose: Boolean = false)(implicit s: Storage): Int =
       processAwaitAndClean(Engine.deploy(
         ea, engineInstanceId, serverArgs, sparkArgs, pioHome, verbose))
 
   def undeploy(da: DeployArgs): Int = Engine.undeploy(da)
 
-  def dashboard(da: DashboardArgs): Int = {
+  def dashboard(da: DashboardArgs)(implicit s: Storage): Int = {
     Management.dashboard(da).awaitTermination
     0
   }
 
-  def eventserver(ea: EventServerArgs): Int = {
+  def eventserver(ea: EventServerArgs)(implicit s: Storage): Int = {
     Management.eventserver(ea).awaitTermination
     0
   }
 
-  def adminserver(aa: AdminServerArgs): Int = {
+  def adminserver(aa: AdminServerArgs)(implicit s: Storage): Int = {
     Management.adminserver(aa).awaitTermination
     0
   }
 
   def run(
+    ea: EngineArgs,
     mainClass: String,
     driverArguments: Seq[String],
-    manifestJson: File,
     buildArgs: BuildArgs,
     sparkArgs: SparkArgs,
     pioHome: String,
     verbose: Boolean = false): Int =
       doOnSuccess(Engine.run(
-        mainClass, driverArguments, manifestJson,
-        buildArgs, sparkArgs, pioHome, verbose)) { proc =>
+        ea, mainClass, driverArguments, buildArgs,
+        sparkArgs, pioHome, verbose)) { proc =>
 
           val r = proc.exitValue()
           if (r != 0) {
@@ -170,7 +161,7 @@ object Pio extends Logging {
       name: String,
       id: Option[Int] = None,
       description: Option[String] = None,
-      accessKey: String = ""): Int =
+      accessKey: String = "")(implicit s: Storage): Int =
         doOnSuccess(AppCmd.create(name, id, description, accessKey)) { appDesc =>
             info("Created a new app:")
             info(s"      Name: ${appDesc.app.name}")
@@ -179,10 +170,10 @@ object Pio extends Logging {
             0
         }
 
-    def list(): Int = {
+    def list()(implicit s: Storage): Int = {
       val title = "Name"
       val ak = "Access Key"
-      val apps = AppCmd.list
+      val apps = AppCmd.list()
       info(f"$title%20s |   ID | $ak%64s | Allowed Event(s)")
       apps foreach { appDesc =>
         appDesc.keys foreach { k =>
@@ -195,7 +186,7 @@ object Pio extends Logging {
       0
     }
 
-    def show(appName: String): Int =
+    def show(appName: String)(implicit s: Storage): Int =
       doOnSuccess(AppCmd.show(appName)) { case (appDesc, chans) =>
         info(s"    App Name: ${appDesc.app.name}")
         info(s"      App ID: ${appDesc.app.id}")
@@ -225,7 +216,7 @@ object Pio extends Logging {
         0
       }
 
-    def delete(name: String, force: Boolean = false): Int =
+    def delete(name: String, force: Boolean = false)(implicit s: Storage): Int =
       doOnSuccess(AppCmd.show(name)) { case (appDesc, chans) =>
         info(s"The following app (including all channels) will be deleted. Are you sure?")
         info(s"    App Name: ${appDesc.app.name}")
@@ -256,7 +247,7 @@ object Pio extends Logging {
       name: String,
       channel: Option[String] = None,
       all: Boolean = false,
-      force: Boolean = false): Int =
+      force: Boolean = false)(implicit s: Storage): Int =
         doOnSuccess(AppCmd.show(name)) { case (appDesc, chans) =>
 
           val channelId = channel.map { ch =>
@@ -292,13 +283,13 @@ object Pio extends Logging {
           }
         }
 
-    def channelNew(appName: String, newChannel: String): Int =
+    def channelNew(appName: String, newChannel: String)(implicit s: Storage): Int =
       AppCmd.channelNew(appName, newChannel)
 
     def channelDelete(
       appName: String,
       deleteChannel: String,
-      force: Boolean = false): Int =
+      force: Boolean = false)(implicit s: Storage): Int =
         doOnSuccess(AppCmd.show(appName)) { case (appDesc, chans) =>
           chans.find(chan => chan.name == deleteChannel) match {
             case None =>
@@ -329,10 +320,10 @@ object Pio extends Logging {
     def create(
       appName: String,
       key: String,
-      events: Seq[String]): Int =
+      events: Seq[String])(implicit s: Storage): Int =
         AccessKeysCmd.create(appName, key, events)
 
-    def list(app: Option[String]): Int =
+    def list(app: Option[String])(implicit s: Storage): Int =
       doOnSuccess(AccessKeysCmd.list(app)) { keys =>
         val title = "Access Key(s)"
         info(f"$title%64s | App ID | Allowed Event(s)")
@@ -345,7 +336,7 @@ object Pio extends Logging {
         0
       }
 
-    def delete(key: String): Int = AccessKeysCmd.delete(key)
+    def delete(key: String)(implicit s: Storage): Int = AccessKeysCmd.delete(key)
   }
 
 }

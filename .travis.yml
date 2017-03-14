@@ -35,43 +35,30 @@ scala:
 jdk:
   - oraclejdk8
 
-addons:
-    postgresql: "9.3"
-    apt:
-      packages:
-        - haveged
-
 services:
   - docker
 
 sudo: required
 
-# cache:
-#   directories:
-#     - $HOME/.ivy2/cache
-#     - $HOME/.sbt/boot
-# before_cache:
-#   - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
-#   - find $HOME/.sbt -name "*.lock" -delete
-
 cache: false
 
 env:
-  global:
-    - PIO_HOME=`pwd`
-
   matrix:
-    - BUILD_TYPE=Unit
+    - BUILD_TYPE=Unit METADATA_REP=PGSQL EVENTDATA_REP=PGSQL MODELDATA_REP=PGSQL
     - BUILD_TYPE=Integration METADATA_REP=PGSQL EVENTDATA_REP=PGSQL MODELDATA_REP=PGSQL
-    - BUILD_TYPE=Integration METADATA_REP=ELASTICSEARCH EVENTDATA_REP=HBASE MODELDATA_REP=LOCALFS
-    - BUILD_TYPE=Integration METADATA_REP=ELASTICSEARCH EVENTDATA_REP=PGSQL MODELDATA_REP=HDFS
+    - BUILD_TYPE=Integration METADATA_REP=ELASTICSEARCH EVENTDATA_REP=HBASE MODELDATA_REP=LOCALFS ES_VERSION=5
+    - BUILD_TYPE=Integration METADATA_REP=ELASTICSEARCH EVENTDATA_REP=PGSQL MODELDATA_REP=HDFS ES_VERSION=5
 
 before_install:
   - unset SBT_OPTS JVM_OPTS
-  - docker pull predictionio/pio-testing
-  - service haveged start
+  - sudo rm /usr/local/bin/docker-compose
+  - curl -L https://github.com/docker/compose/releases/download/1.11.1/docker-compose-`uname -s`-`uname -m` > docker-compose
+  - chmod +x docker-compose
+  - sudo mv docker-compose /usr/local/bin
 
 before_script:
+  - sudo sysctl -w vm.max_map_count=262144
+  - docker-compose -v
   - ./tests/before_script.travis.sh
 
 script:

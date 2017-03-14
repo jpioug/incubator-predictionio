@@ -16,8 +16,8 @@
 # limitations under the License.
 #
 
-set -e
+# Print a summary of containers used
+docker ps -a
 
-if [[ $BUILD_TYPE == Unit ]]; then
-  ./bin/travis/pio-stop-travis
-fi
+# Clean up used containers
+docker-compose -f tests/docker-compose.yml down

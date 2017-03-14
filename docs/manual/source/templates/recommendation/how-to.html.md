@@ -1,3 +1,7 @@
+---
+title: How-To  (Recommendation)
+---
+
 <!--
 Licensed to the Apache Software Foundation (ASF) under one or more
 contributor license agreements.  See the NOTICE file distributed with
@@ -15,14 +19,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
----
-title: How-To  (Recommendation)
----
-      
-Here are the pages that show you how you can customize the Recommendation engine template. 
- 
+Here are the pages that show you how you can customize the Recommendation engine template.
+
 - [Read Custom Events](/templates/recommendation/reading-custom-events/)
 - [Train with Implicit Preference](/templates/recommendation/training-with-implicit-preference/)
 - [Customize Data Preparator](/templates/recommendation/customize-data-prep/)
 - [Customize Serving](/templates/recommendation/customize-serving/)
 - [Filter Recommended Items by Blacklist in Query](/templates/recommendation/blacklist-items/)
+- [Batch Persistable Evaluator](/templates/recommendation/batch-evaluator/)
