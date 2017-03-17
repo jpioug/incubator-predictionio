@@ -16,9 +16,8 @@
 version: "2"
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:5.2.2
+    image: elasticsearch:1
     environment:
-      - xpack.security.enabled=false
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
   hbase:
     image: harisekhon/hbase:1.0
@@ -29,7 +28,7 @@ services:
       POSTGRES_PASSWORD: pio
       POSTGRES_INITDB_ARGS: --encoding=UTF8
   pio-testing:
-    image: predictionio/pio-testing:latest
+    image: predictionio/pio-testing-es1:latest
     depends_on:
       - elasticsearch
       - hbase

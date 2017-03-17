@@ -42,6 +42,12 @@ rm -rf dist/* \
 cp dist/lib/*.jar assembly/
 mkdir -p lib/spark
 cp dist/lib/spark/*.jar lib/spark
+rm *.tar.gz
 docker build -t predictionio/pio .
 popd
-docker build -t predictionio/pio-testing $DIR
+
+if [ "$ES_VERSION" = "1" ]; then
+    docker build -t predictionio/pio-testing-es1 -f $DIR/Dockerfile-es1 $DIR
+else
+    docker build -t predictionio/pio-testing $DIR
+fi

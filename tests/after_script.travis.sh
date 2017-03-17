@@ -16,4 +16,14 @@
 # limitations under the License.
 #
 
-docker-compose -f tests/docker-compose.yml down
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Print a summary of containers used
+docker ps -a
+
+# Clean up used containers
+if [ "$ES_VERSION" = "1" ]; then
+    docker-compose -f $DIR/docker-compose-es1.yml down
+else
+    docker-compose -f $DIR/docker-compose.yml down
+fi
