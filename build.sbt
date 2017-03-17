@@ -36,7 +36,12 @@ javacOptions in (ThisBuild, compile) ++= Seq("-source", "1.7", "-target", "1.7",
 
 json4sVersion in ThisBuild := "3.2.10"
 
-sparkVersion in ThisBuild := "2.1.0"
+sparkVersion in ThisBuild := {
+  scalaBinaryVersion.value match {
+    case "2.10" => "1.6.3"
+    case _ => "2.1.0"
+  }
+}
 
 val pioBuildInfoSettings = buildInfoSettings ++ Seq(
   sourceGenerators in Compile <+= buildInfo,

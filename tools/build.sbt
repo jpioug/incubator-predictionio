@@ -22,6 +22,7 @@ name := "apache-predictionio-tools"
 libraryDependencies ++= Seq(
   "org.apache.predictionio" %% "apache-predictionio-core" % version.value,
   "me.lessis"                % "semverfi_2.10"  % "0.1.3",
+  "org.spark-project.akka"  %% "akka-slf4j"     % "2.3.4-spark",
   "org.apache.spark"        %% "spark-sql"      % sparkVersion.value % "provided",
   "io.spray"                %% "spray-testkit"  % "1.3.3" % "test",
   "org.specs2"              %% "specs2"         % "2.3.13" % "test"
