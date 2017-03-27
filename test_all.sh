@@ -1,4 +1,20 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
 
 RUN_MODE=$1
 
@@ -35,7 +51,7 @@ build() {
   echo "#"
   echo "# Build PredictionIO"
   echo "#"
-  bash $BASE_DIR/make-distribution.sh --with-es=5
+  bash $BASE_DIR/make-distribution.sh -Delasticsearch.version=$ELASTICSEARCH_VERSION
 #  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
   if [ $? != 0 ] ; then
     echo "Build Failed!"
@@ -113,7 +129,11 @@ deploy_all() {
   replace_line "s/PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE=LOCALFS/" $PIO_ENV_FILE
   replace_line "s/^PIO_STORAGE_SOURCES_PGSQL_/# PIO_STORAGE_SOURCES_PGSQL_/g" $PIO_ENV_FILE
   replace_line "s/# PIO_STORAGE_SOURCES_LOCALFS/PIO_STORAGE_SOURCES_LOCALFS/" $PIO_ENV_FILE
-  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_HOME=$PIO_HOME/vendors/elasticsearch-5.2.1' >> $PIO_ENV_FILE
+  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_TYPE=elasticsearch' >> $PIO_ENV_FILE
+  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_HOSTS=localhost' >> $PIO_ENV_FILE
+  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_PORTS=9200' >> $PIO_ENV_FILE
+  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_SCHEMES=http' >> $PIO_ENV_FILE
+  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_HOME=$PIO_HOME/vendors/elasticsearch-'$ELASTICSEARCH_VERSION >> $PIO_ENV_FILE
 
   ES_CONF_FILE=$PIO_HOME/vendors/elasticsearch-*/config/elasticsearch.yml
   echo 'http.cors.enabled: true' >> $ES_CONF_FILE
@@ -172,7 +192,7 @@ build_template() {
   "eventTime" : "2014-11-10T12:34:56.123-08:00"
 }'
 
-  curl -s -i -X GET "http://localhost:9200/_refresh?pretty"
+  curl -s -i -X POST "http://localhost:9200/_refresh?pretty"
   curl -s -i -X GET "http://localhost:7070/events.json?accessKey=$ACCESS_KEY"
 
   if [ ! -f ../sample_movielens_data.txt ] ; then
@@ -217,9 +237,10 @@ else # default
   cd `dirname $0`
   BASE_DIR=`pwd`
 
+  ELASTICSEARCH_VERSION=5.2.2
   SPARK_FILE=spark-1.6.3-bin-hadoop2.6.tgz
   #ES_FILE=elasticsearch-1.7.6.tar.gz
-  ES_FILE=elasticsearch-5.2.1.tar.gz
+  ES_FILE=elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
 
   PIO_HOME=$BASE_DIR/PredictionIO-bin
 
