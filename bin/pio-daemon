@@ -22,7 +22,7 @@ search() {
   local needle=$1;
   shift
   for str in $@; do
-    if [ "$str" = "$needle" ]; then
+    if [ "${str}" = "$needle" ]; then
       echo ${i}
       return
     else

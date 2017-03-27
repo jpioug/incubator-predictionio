@@ -15,7 +15,35 @@
  * limitations under the License.
  */
 
-import UnidocKeys._
+import PIOBuild._
+
+lazy val scalaSparkDepsVersion = Map(
+  "2.10" -> Map(
+    "1.6" -> Map(
+      "akka" -> "2.3.15",
+      "hadoop" -> "2.6.5",
+      "json4s" -> "3.2.10"),
+    "2.0" -> Map(
+      "akka" -> "2.3.16",
+      "hadoop" -> "2.7.3",
+      "json4s" -> "3.2.11"),
+    "2.1" -> Map(
+      "akka" -> "2.3.16",
+      "hadoop" -> "2.7.3",
+      "json4s" -> "3.2.11")),
+  "2.11" -> Map(
+    "1.6" -> Map(
+      "akka" -> "2.3.15",
+      "hadoop" -> "2.6.5",
+      "json4s" -> "3.2.10"),
+    "2.0" -> Map(
+      "akka" -> "2.4.17",
+      "hadoop" -> "2.7.3",
+      "json4s" -> "3.2.11"),
+    "2.1" -> Map(
+      "akka" -> "2.4.17",
+      "hadoop" -> "2.7.3",
+      "json4s" -> "3.2.11")))
 
 name := "apache-predictionio-parent"
 
@@ -23,20 +51,38 @@ version in ThisBuild := "0.11.0-v1-SNAPSHOT"
 
 organization in ThisBuild := "org.jpioug.predictionio"
 
-scalaVersion in ThisBuild := "2.10.5"
+scalaVersion in ThisBuild := sys.props.getOrElse("scala.version", "2.10.6")
+
+crossScalaVersions in ThisBuild := Seq("2.10.6", "2.11.8")
+
+crossScalaVersions in ThisBuild := Seq(scalaVersion.value, "2.11.8")
 
 scalacOptions in ThisBuild ++= Seq("-deprecation", "-unchecked", "-feature")
 
 scalacOptions in (ThisBuild, Test) ++= Seq("-Yrangepos")
-
 fork in (ThisBuild, run) := true
 
 javacOptions in (ThisBuild, compile) ++= Seq("-source", "1.7", "-target", "1.7",
   "-Xlint:deprecation", "-Xlint:unchecked")
 
-json4sVersion in ThisBuild := "3.2.10"
+// Ignore differentiation of Spark patch levels
+sparkVersion in ThisBuild := sys.props.getOrElse("spark.version", "1.6.3")
 
-sparkVersion in ThisBuild := "1.6.3"
+sparkBinaryVersion in ThisBuild := binaryVersion(sparkVersion.value)
+
+akkaVersion in ThisBuild := sys.props.getOrElse(
+  "akka.version",
+  scalaSparkDepsVersion(scalaBinaryVersion.value)(sparkBinaryVersion.value)("akka"))
+
+lazy val es = sys.props.getOrElse("elasticsearch.version", "1.7.6")
+
+elasticsearchVersion in ThisBuild := es
+
+json4sVersion in ThisBuild := scalaSparkDepsVersion(scalaBinaryVersion.value)(sparkBinaryVersion.value)("json4s")
+
+hadoopVersion in ThisBuild := sys.props.getOrElse(
+  "hadoop.version",
+  scalaSparkDepsVersion(scalaBinaryVersion.value)(sparkBinaryVersion.value)("hadoop"))
 
 val pioBuildInfoSettings = buildInfoSettings ++ Seq(
   sourceGenerators in Compile <+= buildInfo,
@@ -44,75 +90,112 @@ val pioBuildInfoSettings = buildInfoSettings ++ Seq(
     name,
     version,
     scalaVersion,
+    scalaBinaryVersion,
     sbtVersion,
-    sparkVersion),
+    sparkVersion,
+    hadoopVersion),
   buildInfoPackage := "org.apache.predictionio.core")
 
 val conf = file("conf")
 
 val commonSettings = Seq(
   autoAPIMappings := true,
-  unmanagedClasspath in Test += conf)
+  unmanagedClasspath in Test += conf,
+  unmanagedClasspath in Test += baseDirectory.value.getParentFile / s"storage/jdbc/target/scala-${scalaBinaryVersion.value}/classes")
+
+val commonTestSettings = Seq(
+  libraryDependencies ++= Seq(
+    "org.postgresql"   % "postgresql"  % "9.4-1204-jdbc41" % "test",
+    "org.scalikejdbc" %% "scalikejdbc" % "2.3.5" % "test"))
+
+val dataElasticsearch1 = (project in file("storage/elasticsearch1")).
+  settings(commonSettings: _*).
+  enablePlugins(GenJavadocPlugin).
+  settings(publishArtifact := false)
+
+val dataElasticsearch = (project in file("storage/elasticsearch")).
+  settings(commonSettings: _*).
+  settings(publishArtifact := false)
+
+val dataHbase = (project in file("storage/hbase")).
+  settings(commonSettings: _*).
+  enablePlugins(GenJavadocPlugin).
+  settings(publishArtifact := false)
+
+val dataHdfs = (project in file("storage/hdfs")).
+  settings(commonSettings: _*).
+  enablePlugins(GenJavadocPlugin).
+  settings(publishArtifact := false)
+
+val dataJdbc = (project in file("storage/jdbc")).
+  settings(commonSettings: _*).
+  enablePlugins(GenJavadocPlugin).
+  settings(publishArtifact := false)
+
+val dataLocalfs = (project in file("storage/localfs")).
+  settings(commonSettings: _*).
+  enablePlugins(GenJavadocPlugin).
+  settings(publishArtifact := false)
 
 val common = (project in file("common")).
   settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
+  enablePlugins(GenJavadocPlugin).
+  disablePlugins(sbtassembly.AssemblyPlugin)
 
 val data = (project in file("data")).
   dependsOn(common).
   settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
-
-val dataElasticsearch1 = (project in file("storage/elasticsearch1")).
-  settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
-
-val dataElasticsearch = (project in file("storage/elasticsearch")).
-  settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
-
-val dataHbase = (project in file("storage/hbase")).
-  settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
-
-val dataHdfs = (project in file("storage/hdfs")).
-  settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
-
-val dataJdbc = (project in file("storage/jdbc")).
-  settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
-
-val dataLocalfs = (project in file("storage/localfs")).
-  settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
+  settings(commonTestSettings: _*).
+  enablePlugins(GenJavadocPlugin).
+  settings(unmanagedSourceDirectories in Compile +=
+    sourceDirectory.value / s"main/spark-${majorVersion(sparkVersion.value)}").
+  disablePlugins(sbtassembly.AssemblyPlugin)
 
 val core = (project in file("core")).
   dependsOn(data).
   settings(commonSettings: _*).
-  settings(genjavadocSettings: _*).
+  settings(commonTestSettings: _*).
+  enablePlugins(GenJavadocPlugin).
   settings(pioBuildInfoSettings: _*).
-  enablePlugins(SbtTwirl)
+  enablePlugins(SbtTwirl).
+  disablePlugins(sbtassembly.AssemblyPlugin)
 
 val tools = (project in file("tools")).
   dependsOn(core).
   dependsOn(data).
   settings(commonSettings: _*).
-  settings(genjavadocSettings: _*).
-  enablePlugins(SbtTwirl)
+  settings(commonTestSettings: _*).
+  enablePlugins(GenJavadocPlugin).
+  enablePlugins(SbtTwirl).
+  settings(publishArtifact := false)
 
 val e2 = (project in file("e2")).
   settings(commonSettings: _*).
-  settings(genjavadocSettings: _*)
+  enablePlugins(GenJavadocPlugin).
+  disablePlugins(sbtassembly.AssemblyPlugin)
+
+val dataEs = if (majorVersion(es) == 1) dataElasticsearch1 else dataElasticsearch
+
+val storageSubprojects = Seq(
+    dataEs,
+    dataHbase,
+    dataHdfs,
+    dataJdbc,
+    dataLocalfs)
+
+val storage = (project in file("storage"))
+  .aggregate(storageSubprojects map Project.projectToRef: _*)
+  .disablePlugins(sbtassembly.AssemblyPlugin)
 
 val assembly = (project in file("assembly")).
   settings(commonSettings: _*)
 
 val root = (project in file(".")).
   settings(commonSettings: _*).
-  // settings(scalaJavaUnidocSettings: _*).
-  settings(unidocSettings: _*).
+  enablePlugins(ScalaUnidocPlugin).
   settings(
+    unidocProjectFilter in (ScalaUnidoc, unidoc) := inAnyProject -- inProjects(dataElasticsearch),
+    unidocProjectFilter in (JavaUnidoc, unidoc) := inAnyProject -- inProjects(dataElasticsearch),
     scalacOptions in (ScalaUnidoc, unidoc) ++= Seq(
       "-groups",
       "-skip-packages",
@@ -165,18 +248,8 @@ val root = (project in file(".")).
       "docs/javadoc/javadoc-overview.html",
       "-noqualifier",
       "java.lang")).
-  aggregate(
-    common,
-    core,
-    data,
-    dataElasticsearch1,
-    dataElasticsearch,
-    dataHbase,
-    dataHdfs,
-    dataJdbc,
-    dataLocalfs,
-    tools,
-    e2)
+  aggregate(common, core, data, tools, e2).
+  disablePlugins(sbtassembly.AssemblyPlugin)
 
 val pioUnidoc = taskKey[Unit]("Builds PredictionIO ScalaDoc")
 
@@ -196,7 +269,7 @@ homepage := Some(url("http://predictionio.incubator.apache.org"))
 
 pomExtra := {
   <parent>
-    <groupId>org.apache</groupId>
+    <groupId>org.jpioug</groupId>
     <artifactId>apache</artifactId>
     <version>18</version>
   </parent>
@@ -235,3 +308,10 @@ parallelExecution := false
 parallelExecution in Global := false
 
 testOptions in Test += Tests.Argument("-oDF")
+
+printBuildInfo := {
+  println(s"PIO_SCALA_VERSION=${scalaVersion.value}")
+  println(s"PIO_SPARK_VERSION=${sparkVersion.value}")
+  println(s"PIO_ELASTICSEARCH_VERSION=${elasticsearchVersion.value}")
+  println(s"PIO_HADOOP_VERSION=${hadoopVersion.value}")
+}

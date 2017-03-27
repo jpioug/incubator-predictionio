@@ -15,30 +15,23 @@
  * limitations under the License.
  */
 
+import PIOBuild._
+
 name := "apache-predictionio-data-localfs"
 
 libraryDependencies ++= Seq(
   "org.jpioug.predictionio" %% "apache-predictionio-core" % version.value % "provided",
-  "org.jpioug.predictionio" %% "apache-predictionio-data" % version.value % "provided",
-  "org.scalatest"           %% "scalatest"      % "2.1.7" % "test",
-  "org.specs2"              %% "specs2"         % "2.3.13" % "test")
+  "org.scalatest"           %% "scalatest"      % "2.1.7" % "test")
 
 parallelExecution in Test := false
 
 pomExtra := childrenPomExtra.value
 
-assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true)
-
-assemblyMergeStrategy in assembly := {
-  case PathList("META-INF", "LICENSE.txt") => MergeStrategy.concat
-  case PathList("META-INF", "NOTICE.txt")  => MergeStrategy.concat
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
-}
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
 
 // skip test in assembly
 test in assembly := {}
 
-assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / "spark" / ("pio-data-localfs-assembly-" + version.value + ".jar")
-
+assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile /
+  "assembly" / "src" / "universal" / "lib" / "spark" /
+  s"pio-data-localfs-assembly-${version.value}.jar"

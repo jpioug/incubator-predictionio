@@ -46,6 +46,8 @@ shift
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+source $DIR/../conf/pio-vendors.sh
+
 docker-compose -f $DIR/docker-compose.yml run \
   -e PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=$META \
   -e PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE=$EVENT \

@@ -25,7 +25,9 @@ name := "predictionio"
 
 maintainer in Linux := "Apache Software Foundation"
 packageSummary in Linux := "Apache PredictionIO"
-packageDescription := "Apache PredictionIO is an open source Machine Learning Server built on top of state-of-the-art open source stack for developers and data scientists create predictive engines for any machine learning task."
+packageDescription := "Apache PredictionIO is an open source Machine Learning Server " +
+  "built on top of state-of-the-art open source stack for developers " +
+  "and data scientists create predictive engines for any machine learning task."
 
 version in Rpm := version.value.replace("-", "_")
 rpmRelease := "1"
@@ -40,20 +42,24 @@ maintainerScripts in Rpm := maintainerScriptsAppendFromFile((maintainerScripts i
 
 mappings in Universal ++= {
   val releaseFile = baseDirectory.value / ".." / "RELEASE.md"
-  val envFile = baseDirectory.value / "src" / "universal" / "conf" / "pio-env.sh.template"
   val buildPropFile = baseDirectory.value / ".." / "project" / "build.properties"
   val sbtFile = baseDirectory.value / ".." / "sbt" / "sbt"
   Seq(releaseFile -> "RELEASE",
-      envFile -> "conf/pio-env.sh",
       buildPropFile -> "project/build.properties",
       sbtFile -> "sbt/sbt")
 }
 
-mappings in Universal := {
-  val universalMappings = (mappings in Universal).value
-  universalMappings filter {
-    case (file, name) => !name.endsWith(".template") && !name.endsWith("travis")
-  }
+mappings in Universal ++= {
+  val files = IO.listFiles(baseDirectory.value / ".." / "conf")
+  files filterNot { f => f.getName.endsWith(".travis") } map {
+    case f if f.getName equals "pio-env.sh.template" => f -> "conf/pio-env.sh"
+    case f => f -> s"conf/${f.getName}"
+  } toSeq
+}
+
+mappings in Universal ++= {
+  val files = IO.listFiles(baseDirectory.value / ".." / "bin")
+  files map { f => f -> s"bin/${f.getName}" } toSeq
 }
 
 linuxPackageMappings := {

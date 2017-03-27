@@ -29,13 +29,6 @@ import org.apache.predictionio.tools.ReturnTypes._
 import org.apache.predictionio.workflow.WorkflowUtils
 
 import org.apache.commons.io.FileUtils
-import org.json4s.native.Serialization.read
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization.read
-import org.json4s.native.Serialization.write
-import scala.io.Source
-import scala.util.Random
 import scala.collection.JavaConversions._
 import scala.sys.process._
 import scalaj.http.Http
@@ -222,7 +215,8 @@ object Engine extends EitherLogging {
       return Left(verifyResult.left.get)
     }
     val ei = Console.getEngineInfo(
-      new File(engineDirPath, serverArgs.variantJson.getName))
+      serverArgs.variantJson.getOrElse(new File(engineDirPath, "engine.json")),
+      engineDirPath)
     val engineInstances = storage.Storage.getMetaDataEngineInstances
     val engineInstance = engineInstanceId map { eid =>
       engineInstances.get(eid)

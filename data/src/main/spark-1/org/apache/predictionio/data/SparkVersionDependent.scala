@@ -15,23 +15,16 @@
  * limitations under the License.
  */
 
-import sbt._
-import Keys._
 
-object PIOBuild extends Build {
-  val elasticsearch5Version = SettingKey[String](
-    "elasticsearch5-version",
-    "The version of Elasticsearch 5.x used for building.")
-  val elasticsearchVersion = SettingKey[String](
-    "elasticsearch-version",
-    "The version of Elasticsearch 1.x used for building.")
-  val json4sVersion = SettingKey[String](
-    "json4s-version",
-    "The version of JSON4S used for building.")
-  val sparkVersion = SettingKey[String](
-    "spark-version",
-    "The version of Apache Spark used for building.")
-  val childrenPomExtra = SettingKey[scala.xml.NodeSeq](
-    "children-pom-extra",
-    "Extra POM data for children projects.")
+package org.apache.predictionio.data
+
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.SQLContext
+
+object SparkVersionDependent {
+
+  def sqlSession(sc: SparkContext): SQLContext = {
+    return new SQLContext(sc)
+  }
+
 }

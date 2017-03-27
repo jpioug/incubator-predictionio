@@ -15,29 +15,19 @@
  * limitations under the License.
  */
 
+import PIOBuild._
 import sbtassembly.AssemblyPlugin.autoImport._
 
 name := "apache-predictionio-tools"
 
 libraryDependencies ++= Seq(
-  "com.github.scopt"       %% "scopt"          % "3.2.0",
-  "io.spray"               %% "spray-can"      % "1.3.3",
-  "io.spray"               %% "spray-routing"  % "1.3.3",
   "me.lessis"               % "semverfi_2.10"  % "0.1.3",
-  "org.apache.hadoop"       % "hadoop-common"  % "2.6.2",
-  "org.apache.hadoop"       % "hadoop-hdfs"    % "2.6.2",
-  "org.apache.spark"       %% "spark-core"     % sparkVersion.value % "provided",
   "org.apache.spark"       %% "spark-sql"      % sparkVersion.value % "provided",
-  "org.clapper"            %% "grizzled-slf4j" % "1.0.2",
-  "org.json4s"             %% "json4s-native"  % json4sVersion.value,
-  "org.json4s"             %% "json4s-ext"     % json4sVersion.value,
-  "org.scalaj"             %% "scalaj-http"    % "1.1.6",
-  "org.spark-project.akka" %% "akka-actor"     % "2.3.4-spark",
+  "com.typesafe.akka"      %% "akka-slf4j"     % akkaVersion.value,
   "io.spray"               %% "spray-testkit"  % "1.3.3" % "test",
-  "org.specs2"             %% "specs2"         % "2.3.13" % "test",
-  "org.spark-project.akka" %% "akka-slf4j"     % "2.3.4-spark")
+  "org.specs2"             %% "specs2"         % "2.3.13" % "test")
 
-dependencyOverrides +=   "org.slf4j" % "slf4j-log4j12" % "1.7.18"
+dependencyOverrides += "org.slf4j" % "slf4j-log4j12" % "1.7.18"
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "LICENSE.txt") => MergeStrategy.concat
@@ -47,14 +37,10 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
-excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
+assemblyExcludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
   cp filter { _.data.getName match {
-    case "asm-3.1.jar" => true
-    case "commons-beanutils-1.7.0.jar" => true
     case "reflectasm-1.10.1.jar" => true
-    case "commons-beanutils-core-1.8.0.jar" => true
     case "kryo-3.0.3.jar" => true
-    case "slf4j-log4j12-1.7.5.jar" => true
     case _ => false
   }}
 }
@@ -62,16 +48,16 @@ excludedJars in assembly <<= (fullClasspath in assembly) map { cp =>
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.objenesis.**" -> "shadeio.@1").inLibrary("com.esotericsoftware.kryo" % "kryo" % "2.21").inProject,
   ShadeRule.rename("com.esotericsoftware.reflectasm.**" -> "shadeio.@1").inLibrary("com.esotericsoftware.kryo" % "kryo" % "2.21").inProject,
-  ShadeRule.rename("com.esotericsoftware.minlog.**" -> "shadeio.@1").inLibrary("com.esotericsoftware.kryo" % "kryo" % "2.21").inProject,
-  ShadeRule.rename("org.apache.http.**" -> "shadeio.http.@1").inAll
+  ShadeRule.rename("com.esotericsoftware.minlog.**" -> "shadeio.@1").inLibrary("com.esotericsoftware.kryo" % "kryo" % "2.21").inProject
 )
 
 // skip test in assembly
 test in assembly := {}
 
-outputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile /
-  "assembly" / "src" / "universal" / "lib" / ("pio-assembly-" + version.value + ".jar")
+assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile /
+  "assembly" / "src" / "universal" / "lib" / s"pio-assembly-${version.value}.jar"
 
-cleanFiles <+= baseDirectory { base => base.getParentFile / "assembly" / "src" / "universal" / "lib" }
+cleanFiles <+= baseDirectory { base => base.getParentFile /
+  "assembly" / "src" / "universal" / "lib" }
 
 pomExtra := childrenPomExtra.value

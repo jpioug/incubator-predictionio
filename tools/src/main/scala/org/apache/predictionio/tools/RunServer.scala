@@ -20,12 +20,10 @@ package org.apache.predictionio.tools
 
 import org.apache.predictionio.tools.Common._
 import org.apache.predictionio.tools.ReturnTypes._
-import org.apache.predictionio.workflow.WorkflowUtils
 import org.apache.predictionio.workflow.JsonExtractorOption
 import org.apache.predictionio.workflow.JsonExtractorOption.JsonExtractorOption
 
 import java.io.File
-import java.net.URI
 import grizzled.slf4j.Logging
 
 import scala.sys.process._
@@ -47,7 +45,7 @@ case class ServerArgs(
   eventServer: EventServerArgs = EventServerArgs(),
   batch: String = "",
   accessKey: String = "",
-  variantJson: File = new File("engine.json"),
+  variantJson: Option[File] = None,
   jsonExtractor: JsonExtractorOption = JsonExtractorOption.Both)
 
 
@@ -68,7 +66,8 @@ object RunServer extends Logging {
       "--engineInstanceId",
       engineInstanceId,
       "--engine-variant",
-      engineDirPath + File.separator + serverArgs.variantJson.getName,
+      serverArgs.variantJson.getOrElse(
+        new File(engineDirPath, "engine.json")).getCanonicalPath,
       "--ip",
       serverArgs.deploy.ip,
       "--port",

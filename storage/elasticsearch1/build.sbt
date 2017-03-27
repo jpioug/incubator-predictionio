@@ -15,42 +15,24 @@
  * limitations under the License.
  */
 
-lazy val es1LibLocation = settingKey[String]("Jar File Location for elasticsearch 1.x")
+import PIOBuild._
 
 name := "apache-predictionio-data-elasticsearch1"
 
-elasticsearchVersion := "1.7.3"
-
 libraryDependencies ++= Seq(
   "org.jpioug.predictionio" %% "apache-predictionio-core" % version.value % "provided",
-  "org.jpioug.predictionio" %% "apache-predictionio-data" % version.value % "provided",
   "org.elasticsearch"        % "elasticsearch"  % elasticsearchVersion.value,
-  "org.scalatest"           %% "scalatest"      % "2.1.7" % "test",
-  "org.specs2"              %% "specs2"         % "2.3.13" % "test")
+  "org.scalatest"           %% "scalatest"      % "2.1.7" % "test")
 
 parallelExecution in Test := false
 
 pomExtra := childrenPomExtra.value
 
-assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true)
-
-assemblyMergeStrategy in assembly := {
-  case PathList("META-INF", "LICENSE.txt") => MergeStrategy.concat
-  case PathList("META-INF", "NOTICE.txt")  => MergeStrategy.concat
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
-}
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
 
 // skip test in assembly
 test in assembly := {}
 
-es1LibLocation := {
-  sys.env.getOrElse("ES_VERSION", "1") match {
-    case "5" => "extra"
-    case _ => "spark"
-  }
-}
-
-assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile / "assembly" / "src" / "universal" / "lib" / es1LibLocation.value / ("pio-data-elasticsearch1-assembly-" + version.value + ".jar")
-
+assemblyOutputPath in assembly := baseDirectory.value.getAbsoluteFile.getParentFile.getParentFile /
+  "assembly" / "src" / "universal" / "lib" / "spark" /
+  s"pio-data-elasticsearch1-assembly-${version.value}.jar"

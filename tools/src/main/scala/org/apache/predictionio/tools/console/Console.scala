@@ -22,31 +22,17 @@ import java.io.File
 import java.net.URI
 
 import grizzled.slf4j.Logging
-import org.apache.commons.io.FileUtils
-import org.apache.predictionio.controller.Utils
 import org.apache.predictionio.core.BuildInfo
-import org.apache.predictionio.data.api.{EventServer, EventServerConfig}
-import org.apache.predictionio.data.storage
-import org.apache.predictionio.tools.{RunServer, RunWorkflow, Common}
 import org.apache.predictionio.tools.commands.{
   DashboardArgs, AdminServerArgs, ImportArgs, ExportArgs,
   BuildArgs, EngineArgs}
 import org.apache.predictionio.tools.{
   EventServerArgs, SparkArgs, WorkflowArgs, ServerArgs, DeployArgs}
-import org.apache.predictionio.tools.EventServerArgs
-import org.apache.predictionio.tools.admin.{AdminServer, AdminServerConfig}
-import org.apache.predictionio.tools.dashboard.{Dashboard, DashboardConfig}
-import org.apache.predictionio.tools.commands
 import org.apache.predictionio.workflow.{JsonExtractorOption, WorkflowUtils}
-import org.apache.predictionio.workflow.JsonExtractorOption.JsonExtractorOption
 import org.json4s._
 import org.json4s.native.JsonMethods._
-import semverfi._
 
-import scala.collection.JavaConversions._
 import scala.io.Source
-import scala.sys.process._
-import scalaj.http.Http
 
 case class ConsoleArgs(
   build: BuildArgs = BuildArgs(),
@@ -120,10 +106,9 @@ object Console extends Logging {
         "deployment.")
       opt[String]("engine-dir") abbr("ed") action { (x, c) =>
         c.copy(engine = c.engine.copy(engineDir = Some(x)))
-      } text("Specify absolute path for engine directory, default to " +
-        "current directory.")
+      } text("Specify path for engine directory, default to current directory.")
       opt[File]("variant") abbr("v") action { (x, c) =>
-        c.copy(workflow = c.workflow.copy(variantJson = x))
+        c.copy(workflow = c.workflow.copy(variantJson = Some(x)))
       }
       opt[File]("sbt") action { (x, c) =>
         c.copy(build = c.build.copy(sbt = Some(x)))
@@ -734,7 +719,7 @@ object Console extends Logging {
     }
   }
 
-  def getEngineInfo(jsonFile: File): EngineInfo = {
+  def getEngineInfo(jsonFile: File, engineDir: String): EngineInfo = {
     // Use engineFactory as engineId
     val variantJson = parse(Source.fromFile(jsonFile).mkString)
     val engineId = variantJson \ "engineFactory" match {
@@ -754,7 +739,6 @@ object Console extends Logging {
     }
 
     // Use hash of engine directory as engineVersion
-    val engineDir = sys.props("user.dir")
     val engineVersion = java.security.MessageDigest.getInstance("SHA-1").
       digest(engineDir.getBytes).map("%02x".format(_)).mkString
 

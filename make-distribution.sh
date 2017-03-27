@@ -21,15 +21,15 @@ set -e
 
 usage ()
 {
-    echo "Usage: $0 [-h|--help] [--with-es=x]"
+    echo "Usage: $0 [-h|--help]"
     echo ""
     echo "  -h|--help    Show usage"
     echo ""
-    echo "  --with-es=1  Build distribution with Elasticsearch 1 support as default"
-    echo "  --with-es=5  Build distribution with Elasticsearch 5 support as default"
+    echo "  --with-rpm   Build distribution for RPM package"
+    echo "  --with-deb   Build distribution for DEB package"
 }
 
-ES_VERSION=1
+JAVA_PROPS=()
 
 for i in "$@"
 do
@@ -39,8 +39,16 @@ case $i in
     shift
     exit
     ;;
-    --with-es=*)
-    ES_VERSION="${i#*=}"
+    -D*)
+    JAVA_PROPS+=("$i")
+    shift
+    ;;
+    --with-rpm)
+    RPM_BUILD=true
+    shift
+    ;;
+    --with-deb)
+    DEB_BUILD=true
     shift
     ;;
     *)
@@ -50,25 +58,26 @@ case $i in
 esac
 done
 
-if [ "$ES_VERSION" = "1" ] || [ "$ES_VERSION" = "5" ]
-then
-    echo -e "\033[0;32mBuilding with Elasticsearch $ES_VERSION support as the default choice\033[0m"
-else
-    usage
-    exit 1
-fi
-export ES_VERSION
-
 FWDIR="$(cd `dirname $0`; pwd)"
 DISTDIR="${FWDIR}/dist"
 
-VERSION=$(grep version ${FWDIR}/build.sbt | grep ThisBuild | grep -o '".*"' | sed 's/"//g')
+VERSION=$(grep ^version ${FWDIR}/build.sbt | grep ThisBuild | grep -o '".*"' | sed 's/"//g')
 
 echo "Building binary distribution for PredictionIO $VERSION..."
 
 cd ${FWDIR}
-rm -rf assembly/src/universal/lib
-sbt/sbt common/publishLocal data/publishLocal core/publishLocal e2/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly tools/assembly assembly/universal:packageBin assembly/universal:packageZipTarball
+set -x
+sbt/sbt "${JAVA_PROPS[@]}" clean
+sbt/sbt "${JAVA_PROPS[@]}" printBuildInfo
+sbt/sbt "${JAVA_PROPS[@]}" publishLocal assembly storage/assembly
+sbt/sbt "${JAVA_PROPS[@]}" assembly/clean assembly/universal:packageBin assembly/universal:packageZipTarball
+if [ x$RPM_BUILD = "xtrue" ] ; then
+    sbt/sbt "${JAVA_PROPS[@]}" assembly/rpm:packageBin
+fi
+if [ x$DEB_BUILD = "xtrue" ] ; then
+    sbt/sbt "${JAVA_PROPS[@]}" assembly/debian:packageBin
+fi
+set +x
 
 cd ${FWDIR}
 rm -rf ${DISTDIR}
@@ -76,18 +85,16 @@ mkdir -p ${DISTDIR}/bin
 mkdir -p ${DISTDIR}/conf
 mkdir -p ${DISTDIR}/lib
 mkdir -p ${DISTDIR}/lib/spark
-mkdir -p ${DISTDIR}/lib/extra
 mkdir -p ${DISTDIR}/project
-mkdir -p ${DISTDIR}/sbt
-mkdir -p ${DISTDIR}/log
 
-cp ${FWDIR}/assembly/src/universal/bin/* ${DISTDIR}/bin || :
-cp ${FWDIR}/assembly/src/universal/conf/* ${DISTDIR}/conf
+mkdir -p ${DISTDIR}/sbt
+
+cp ${FWDIR}/bin/* ${DISTDIR}/bin || :
+cp ${FWDIR}/conf/* ${DISTDIR}/conf
 cp ${FWDIR}/project/build.properties ${DISTDIR}/project
 cp ${FWDIR}/sbt/sbt ${DISTDIR}/sbt
 cp ${FWDIR}/assembly/src/universal/lib/*assembly*jar ${DISTDIR}/lib
 cp ${FWDIR}/assembly/src/universal/lib/spark/*jar ${DISTDIR}/lib/spark
-cp ${FWDIR}/assembly/src/universal/lib/extra/*jar ${DISTDIR}/lib/extra
 
 rm -f ${DISTDIR}/lib/*javadoc.jar
 rm -f ${DISTDIR}/lib/*sources.jar

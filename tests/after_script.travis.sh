@@ -16,8 +16,12 @@
 # limitations under the License.
 #
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+source $DIR/../conf/pio-vendors.sh
+
 # Print a summary of containers used
 docker ps -a
 
 # Clean up used containers
-docker-compose -f tests/docker-compose.yml down
+docker-compose -f $DIR/docker-compose.yml down

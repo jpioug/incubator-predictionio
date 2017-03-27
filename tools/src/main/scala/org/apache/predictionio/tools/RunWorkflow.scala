@@ -18,25 +18,19 @@
 package org.apache.predictionio.tools
 
 import org.apache.predictionio.tools.console.Console
-import org.apache.predictionio.tools.Runner
 import org.apache.predictionio.tools.Common._
 import org.apache.predictionio.tools.ReturnTypes._
-import org.apache.predictionio.workflow.{WorkflowUtils, JsonExtractorOption}
+import org.apache.predictionio.workflow.JsonExtractorOption
 import org.apache.predictionio.workflow.JsonExtractorOption.JsonExtractorOption
 
 import java.io.File
-import java.net.URI
 import grizzled.slf4j.Logging
-
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.FileSystem
-import org.apache.hadoop.fs.Path
 
 import scala.sys.process._
 
 case class WorkflowArgs(
   batch: String = "",
-  variantJson: File = new File("engine.json"),
+  variantJson: Option[File] = None,
   verbosity: Int = 0,
   engineParamsKey: Option[String] = None,
   engineFactory: Option[String] = None,
@@ -56,15 +50,17 @@ object RunWorkflow extends Logging {
     verbose: Boolean = false): Expected[(Process, () => Unit)] = {
 
     val jarFiles = jarFilesForScala(engineDirPath).map(_.toURI)
-    val variantJson = engineDirPath + File.separator + wa.variantJson.getName
-    val ei = Console.getEngineInfo(new File(variantJson))
+    val variantJson = wa.variantJson.getOrElse(new File(engineDirPath, "engine.json"))
+    val ei = Console.getEngineInfo(
+      variantJson,
+      engineDirPath)
     val args = Seq(
       "--engine-id",
       ei.engineId,
       "--engine-version",
       ei.engineVersion,
       "--engine-variant",
-      variantJson,
+      variantJson.toURI.toString,
       "--verbosity",
       wa.verbosity.toString) ++
       wa.engineFactory.map(

@@ -20,8 +20,7 @@
 OS=`uname`
 SPARK_VERSION=1.6.3
 # Looks like support for Elasticsearch 2.0 will require 2.0 so deferring
-#ELASTICSEARCH_VERSION=1.7.6
-ELASTICSEARCH_VERSION=5.2.1
+ELASTICSEARCH_VERSION=1.7.5
 HBASE_VERSION=1.2.2
 POSTGRES_VERSION=9.4-1204.jdbc41
 MYSQL_VERSION=5.1.37
@@ -354,8 +353,7 @@ installES() {
     fi
     if [[ ! -e elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz ]]; then
       echo "Downloading Elasticsearch..."
-      #curl -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
-      curl -O https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
+      curl -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
     fi
     tar zxf elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
     rm -rf ${elasticsearch_dir}
