@@ -24,7 +24,7 @@ the user mailing list. You can follow the instructions [here](/support).
 
 ## Using PredictionIO
 
-### Q: How do I check to see if various dependencies, such as ElasticSearch and HBase, are running?
+### Q: How do I check to see if various dependencies, such as Elasticsearch and HBase, are running?
 
 You can run `$ pio status` from the terminal and it will return the status of various components that PredictionIO depends on.
 
@@ -52,7 +52,7 @@ Storage Backend Connections
 Your system is all ready to go.
 ```
 
-- If you see the following error message, it usually means ElasticSearch is not running properly:
+- If you see the following error message, it usually means Elasticsearch is not running properly:
 
 ```
   ...
@@ -66,9 +66,9 @@ Caused by: org.elasticsearch.client.transport.NoNodeAvailableException: None of 
 Unable to connect to all storage backend(s) successfully. Please refer to error message(s) above. Aborting.
 ```
 
-You can check if there is any ElasticSearch process by running 'jps'.
+You can check if there is any Elasticsearch process by running 'jps'.
 
-Please see **How to start elasticsearch** below.
+Please see **How to start Elasticsearch** below.
 
 - If you see the following error message, it usually means HBase is not running properly:
 
@@ -94,22 +94,26 @@ You can check if there is any HBase-related process by running 'jps'.
 
 Please see **How to start HBase** below.
 
-### Q: How to start ElasticSearch?
+### Q: How to start Elasticsearch?
 
-If you used the [install script](/install/install-linux/#quick-install) to install PredictionIO, the ElasticSearch is installed at `~/PredictionIO/vendors/elasticsearch-x.y.z/` where x.y.z is the
-version number (currently it's 1.4.4). To start it, run:
+If you followed the [instructions](/install/install-sourcecode/) to install
+PredictionIO, Elasticsearch would have been installed at
+`PredictionIO/vendors/elasticsearch-x.y.z/` where x.y.z is the version number.
+To start it, run:
 
 ```
 $ ~/PredictionIO/vendors/elasticsearch-x.y.z/bin/elasticsearch
 ```
 
-If you didn't use install script, please go to where ElasticSearch is installed to start it.
+If you didn't use install script, please go to where Elasticsearch is installed to start it.
 
-INFO: It may take some time (15 seconds or so) for ElasticSearch to become ready after you start it (wait a bit before you run `pio status` again).
+INFO: It may take some time (15 seconds or so) for Elasticsearch to become ready after you start it (wait a bit before you run `pio status` again).
 
 ### Q: How to start HBase ?
 
-If you used the [install script](/install/install-linux/#quick-install) to install PredictionIO, the HBase is installed at `~/PredictionIO/vendors/hbase-x.y.z/` where x.y.z is the version number (currently it's 0.98.6). To start it, run:
+If you followed the [instructions](/install/install-sourcecode/) to install
+PredictionIO, the HBase is installed at `~/PredictionIO/vendors/hbase-x.y.z/`
+where x.y.z is the version number. To start it, run:
 
 ```
 $ ~/PredictionIO/vendors/hbase-x.y.z/bin/start-hbase.sh
@@ -117,7 +121,8 @@ $ ~/PredictionIO/vendors/hbase-x.y.z/bin/start-hbase.sh
 
 If you didn't use install script, please go to where HBase is installed to start it.
 
-INFO: It may take some time (15 seconds or so) for HBase to become ready after you start it (wait a bit before you run `pio status` again).
+INFO: It may take some time (15 seconds or so) for HBase to become ready after
+you start it (wait a bit before you run `pio status` again).
 
 
 ## Problem with Event Server
@@ -163,7 +168,8 @@ $ pio train -- --conf spark.akka.frameSize=1024
 
 ### Q: How to increase heap space memory for "pio deploy"?
 
-If you see the following error during `pio deploy`, it means there is not enough heap space memory.
+If you see the following error during `pio deploy`, it means there is not enough
+heap space memory.
 
 ```
 ...
@@ -172,7 +178,8 @@ If you see the following error during `pio deploy`, it means there is not enough
 ...
 ```
 
-To increase the heap space, specify the "-- --driver-memory " parameter in the command. For example, set the driver memory to 8G when deploy the engine:
+To increase the heap space, specify the "-- --driver-memory " parameter in the
+command. For example, set the driver memory to 8G when deploy the engine:
 
 ```
 $ pio deploy -- --driver-memory 8G
@@ -206,9 +213,9 @@ drwxr-xr-x 17 yipjustin yipjustin      4096 Nov 12 00:09 ..
 PredictionIO/assembly$ rm pio-assembly-0.8.1-SNAPSHOT.jar
 ```
 
-### Q: How to resolve ".......[error] (data/compile:compile) java.lang.AssertionError: assertion failed: java.lang.AutoCloseable" when ./make_distribution.sh?
+### Q: How to resolve ".......\[error\] (data/compile:compile) java.lang.AssertionError: assertion failed: java.lang.AutoCloseable" when ./make_distribution.sh?
 
-PredictionIO only support Java 7 or later. Please make sure you have the
+PredictionIO only support Java 8 or later. Please make sure you have the
 correct Java version with the command:
 
 ```
@@ -219,9 +226,16 @@ $ javac -version
 
 ### Q: What's the difference between P- and L- prefixed classes and functions?
 
-PredictionIO v0.8 is built on the top of Spark, a massively scalable programming framework. A spark algorithm is different from conventional single machine algorithm in a way that spark algorithms use the [RDD](http://spark.apache.org/docs/1.0.1/programming-guide.html#resilient-distributed-datasets-rdds) abstraction as its primary data type.
+PredictionIO v0.8 is built on the top of Spark, a massively scalable programming
+framework. A spark algorithm is different from conventional single machine
+algorithm in a way that spark algorithms use the
+[RDD](http://spark.apache.org/docs/1.0.1/programming-guide.html#resilient-distributed-datasets-rdds)
+abstraction as its primary data type.
 
-PredictionIO framework natively support both RDD-based algorithms and traditional single-machine algorithms. For controllers prefixed by "P" (i.e. PJavaDataSource, PJavaAlgorithm), their data include RDD abstraction; For "L" controllers, they are traditional single machine algorithms.
+PredictionIO framework natively support both RDD-based algorithms and
+traditional single-machine algorithms. For controllers prefixed by "P" (i.e.
+PJavaDataSource, PJavaAlgorithm), their data include RDD abstraction; For "L"
+controllers, they are traditional single machine algorithms.
 
 ## Running HBase
 
@@ -233,3 +247,40 @@ there could be a chance that reverse DNS does not function properly. You can
 install a DNS server on your own computer. Some users have reported that using
 [Google Public DNS](https://developers.google.com/speed/public-dns/) would also
 solve the problem.
+
+### Q: How to fix HBase issues after cleaning up a disk that was full?
+
+You may receive error messages like `write error: No space left on device`
+when disk is full, and also receive error from `pio status` even after
+restarting PredictionIO services (due to
+[an issue](https://issues.apache.org/jira/browse/ZOOKEEPER-1621) in ZooKeeper).
+
+One quick fix is to delete the newest `snapshot.xxxxx` and `log.xxxoo` in the
+ZooKeeper data directory (e.g. `$HBASE_HOME/zookeeper/zookeeper_0/version-2`).
+Restart all services with `pio-start-all`, and use `pio status` to check whether
+your setup is good to go again.
+
+If you still have problems connecting to the event server, take a look at the
+HBase dashboard to see if there are `regions under transition`. If so, try the
+following:
+
+1.  Try `hbase hbck -repair` and `hbase hbck -repairHoles`. If it solves the
+    problem, you are all set. Otherwise, continue on.
+
+2.  Find out failing regions by `hbase hbck`.
+
+    ```
+    ...
+    Summary:
+    Table pio_event:events_1 is inconsistent.
+      Number of regions: 2
+      Deployed on:  prediction.io,54829,1489213832255
+    ...
+    2 inconsistencies detected.
+    ```
+
+3.  Shutdown HBase process and delete `recovered.edits` folders in the HBase
+    data directory (e.g. `$HBASE_HOME/hbase/data/pio_event/events_1` in this
+    example) for failing regions.
+
+4.  Run `hbase hbck -repairHoles` and restart all PredictionIO services.

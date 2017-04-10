@@ -53,8 +53,6 @@ organization in ThisBuild := "org.jpioug.predictionio"
 
 scalaVersion in ThisBuild := sys.props.getOrElse("scala.version", "2.10.6")
 
-crossScalaVersions in ThisBuild := Seq("2.10.6", "2.11.8")
-
 crossScalaVersions in ThisBuild := Seq(scalaVersion.value, "2.11.8")
 
 scalacOptions in ThisBuild ++= Seq("-deprecation", "-unchecked", "-feature")
@@ -66,7 +64,7 @@ javacOptions in (ThisBuild, compile) ++= Seq("-source", "1.7", "-target", "1.7",
   "-Xlint:deprecation", "-Xlint:unchecked")
 
 // Ignore differentiation of Spark patch levels
-sparkVersion in ThisBuild := sys.props.getOrElse("spark.version", "1.6.3")
+sparkVersion in ThisBuild := sys.props.getOrElse("spark.version", (if (scalaBinaryVersion.value == "2.10") "1.6.3" else "2.1.0"))
 
 sparkBinaryVersion in ThisBuild := binaryVersion(sparkVersion.value)
 
@@ -110,32 +108,26 @@ val commonTestSettings = Seq(
 
 val dataElasticsearch1 = (project in file("storage/elasticsearch1")).
   settings(commonSettings: _*).
-  enablePlugins(GenJavadocPlugin).
-  settings(publishArtifact := false)
+  enablePlugins(GenJavadocPlugin)
 
 val dataElasticsearch = (project in file("storage/elasticsearch")).
-  settings(commonSettings: _*).
-  settings(publishArtifact := false)
+  settings(commonSettings: _*)
 
 val dataHbase = (project in file("storage/hbase")).
   settings(commonSettings: _*).
-  enablePlugins(GenJavadocPlugin).
-  settings(publishArtifact := false)
+  enablePlugins(GenJavadocPlugin)
 
 val dataHdfs = (project in file("storage/hdfs")).
   settings(commonSettings: _*).
-  enablePlugins(GenJavadocPlugin).
-  settings(publishArtifact := false)
+  enablePlugins(GenJavadocPlugin)
 
 val dataJdbc = (project in file("storage/jdbc")).
   settings(commonSettings: _*).
-  enablePlugins(GenJavadocPlugin).
-  settings(publishArtifact := false)
+  enablePlugins(GenJavadocPlugin)
 
 val dataLocalfs = (project in file("storage/localfs")).
   settings(commonSettings: _*).
-  enablePlugins(GenJavadocPlugin).
-  settings(publishArtifact := false)
+  enablePlugins(GenJavadocPlugin)
 
 val common = (project in file("common")).
   settings(commonSettings: _*).
@@ -186,6 +178,7 @@ val storageSubprojects = Seq(
 val storage = (project in file("storage"))
   .aggregate(storageSubprojects map Project.projectToRef: _*)
   .disablePlugins(sbtassembly.AssemblyPlugin)
+  .settings(publishArtifact := false)
 
 val assembly = (project in file("assembly")).
   settings(commonSettings: _*)
