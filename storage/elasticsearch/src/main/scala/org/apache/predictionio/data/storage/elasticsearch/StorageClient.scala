@@ -42,6 +42,10 @@ case class ESClient(hosts: Seq[HttpHost], config: StorageClientConfig) {
   def getNumberOfReplicas(index: String): Option[Int] = {
     config.properties.get(s"${index}_NUM_OF_REPLICAS").map(_.toInt)
   }
+
+  def getEventDataRefresh(): String = {
+    config.properties.getOrElse("EVENTDATA_REFRESH", "true")
+  }
 }
 
 class StorageClient(val config: StorageClientConfig) extends BaseStorageClient
