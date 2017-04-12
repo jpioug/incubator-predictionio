@@ -139,6 +139,7 @@ deploy_all() {
 #  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_PIO_META_NUM_OF_REPLICAS=2' >> $PIO_ENV_FILE
 #  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_PIO_EVENT_NUM_OF_SHARDS=10' >> $PIO_ENV_FILE
 #  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_PIO_EVENT_NUM_OF_REPLICAS=1' >> $PIO_ENV_FILE
+  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_EVENTDATA_REFRESH=false' >> $PIO_ENV_FILE
 
   ES_CONF_FILE=$PIO_HOME/vendors/elasticsearch-*/config/elasticsearch.yml
   echo 'http.cors.enabled: true' >> $ES_CONF_FILE
@@ -205,7 +206,7 @@ build_template() {
     curl https://raw.githubusercontent.com/apache/spark/master/data/mllib/sample_movielens_data.txt --create-dirs -o ../sample_movielens_data.txt
   fi
   cp ../sample_movielens_data.txt data/sample_movielens_data.txt
-  $PYTHON_CMD data/import_eventserver.py --access_key $ACCESS_KEY
+  time $PYTHON_CMD data/import_eventserver.py --access_key $ACCESS_KEY
 
   replace_line "s/INVALID_APP_NAME/MyApp1/" engine.json
 
