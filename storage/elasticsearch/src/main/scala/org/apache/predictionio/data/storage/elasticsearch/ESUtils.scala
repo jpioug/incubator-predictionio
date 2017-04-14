@@ -269,4 +269,16 @@ object ESUtils {
       map(_.split(",").toSeq).getOrElse(Seq("http"))
     (hosts, ports, schemes).zipped.map((h, p, s) => new HttpHost(h, p, s))
   }
+
+  def getNumberOfShards(config: StorageClientConfig, index: String): Option[Int] = {
+    config.properties.get(s"${index}_NUM_OF_SHARDS").map(_.toInt)
+  }
+
+  def getNumberOfReplicas(config: StorageClientConfig, index: String): Option[Int] = {
+    config.properties.get(s"${index}_NUM_OF_REPLICAS").map(_.toInt)
+  }
+
+  def getEventDataRefresh(config: StorageClientConfig): String = {
+    config.properties.getOrElse("EVENTDATA_REFRESH", "true")
+  }
 }
