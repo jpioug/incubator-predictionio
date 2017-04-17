@@ -31,6 +31,11 @@ pomExtra := childrenPomExtra.value
 
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
 
+assemblyShadeRules in assembly := Seq(
+  ShadeRule.rename("org.apache.http.**" -> "shadeio.data.s3.http.@1").inAll,
+  ShadeRule.rename("com.fasterxml.**" -> "shadeio.data.s3.fasterxml.@1").inAll
+)
+
 // skip test in assembly
 test in assembly := {}
 
