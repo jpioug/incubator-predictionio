@@ -60,9 +60,14 @@ class ESChannels(client: ESClient, config: StorageClientConfig, index: String)
   def insert(channel: Channel): Option[Int] = {
     val id =
       if (channel.id == 0) {
-        var roll = seq.genNext(estype)
-        while (!get(roll).isEmpty) roll = seq.genNext(estype)
-        roll
+        val restClient = client.open()
+        try {
+          var roll = seq.genNext(estype, restClient)
+          while (!get(roll).isEmpty) roll = seq.genNext(estype, restClient)
+          roll
+        } finally {
+          restClient.close()
+        }
       } else channel.id
 
     if (update(channel.copy(id = id))) Some(id) else None

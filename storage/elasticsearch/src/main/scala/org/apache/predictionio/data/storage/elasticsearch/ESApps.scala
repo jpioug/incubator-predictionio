@@ -62,9 +62,14 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
   def insert(app: App): Option[Int] = {
     val id =
       if (app.id == 0) {
-        var roll = seq.genNext(estype)
-        while (!get(roll).isEmpty) roll = seq.genNext(estype)
-        roll
+        val restClient = client.open()
+        try {
+          var roll = seq.genNext(estype, restClient)
+          while (!get(roll).isEmpty) roll = seq.genNext(estype, restClient)
+          roll
+        } finally {
+          restClient.close()
+        }
       } else app.id
     update(app.copy(id = id))
     Some(id)

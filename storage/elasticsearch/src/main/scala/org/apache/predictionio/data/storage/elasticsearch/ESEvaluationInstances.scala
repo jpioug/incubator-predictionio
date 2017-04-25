@@ -70,9 +70,14 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
   def insert(i: EvaluationInstance): String = {
     val id = i.id match {
       case x if x.isEmpty =>
-        var roll = seq.genNext(estype).toString
-        while (!get(roll).isEmpty) roll = seq.genNext(estype).toString
-        roll
+        val restClient = client.open()
+        try {
+          var roll = seq.genNext(estype, restClient).toString
+          while (!get(roll).isEmpty) roll = seq.genNext(estype, restClient).toString
+          roll
+        } finally {
+          restClient.close()
+        }
       case x => x
     }
 
