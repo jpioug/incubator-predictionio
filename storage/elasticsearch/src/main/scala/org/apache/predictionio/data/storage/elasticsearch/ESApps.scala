@@ -64,9 +64,7 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
       if (app.id == 0) {
         val restClient = client.open()
         try {
-          var roll = seq.genNext(estype, restClient)
-          while (!get(roll).isEmpty) roll = seq.genNext(estype, restClient)
-          roll
+          seq.genNext(estype, restClient).toInt
         } finally {
           restClient.close()
         }

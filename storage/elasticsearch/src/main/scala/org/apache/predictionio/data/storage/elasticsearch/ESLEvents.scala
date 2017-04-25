@@ -118,9 +118,7 @@ class ESLEvents(val client: ESClient, config: StorageClientConfig, val index: St
       val estype = getEsType(appId, channelId)
       try {
         val id = event.eventId.getOrElse {
-          var roll = seq.genNext(seqName, restClient)
-          while (exists(restClient, estype, roll)) roll = seq.genNext(seqName, restClient)
-          roll.toString
+          seq.genNext(estype, restClient).toString
         }
         val json =
           ("eventId" -> id) ~

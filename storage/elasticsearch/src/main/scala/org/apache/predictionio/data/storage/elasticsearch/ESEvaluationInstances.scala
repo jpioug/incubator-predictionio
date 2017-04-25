@@ -72,9 +72,7 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
       case x if x.isEmpty =>
         val restClient = client.open()
         try {
-          var roll = seq.genNext(estype, restClient).toString
-          while (!get(roll).isEmpty) roll = seq.genNext(estype, restClient).toString
-          roll
+          seq.genNext(estype, restClient).toString
         } finally {
           restClient.close()
         }
