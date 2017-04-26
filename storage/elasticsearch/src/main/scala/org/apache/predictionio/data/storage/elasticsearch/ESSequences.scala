@@ -46,9 +46,9 @@ class ESSequences(client: ESClient, config: StorageClientConfig, index: String) 
       ESUtils.getNumberOfReplicas(config, index.toUpperCase))
     val mappingJson =
       (estype ->
-        ("_all" -> ("enabled" -> 0)) ~
+        ("_all" -> ("enabled" -> false)) ~
         ("properties" ->
-          ("n" -> ("enabled" -> 0))))
+          ("n" -> ("enabled" -> false))))
     ESUtils.createMapping(restClient, index, estype, compact(render(mappingJson)))
   } finally {
     restClient.close()

@@ -50,7 +50,7 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
       ESUtils.getNumberOfReplicas(config, index.toUpperCase))
     val mappingJson =
       (estype ->
-        ("_all" -> ("enabled" -> 0)) ~
+        ("_all" -> ("enabled" -> false)) ~
         ("properties" ->
           ("id" -> ("type" -> "keyword")) ~
           ("name" -> ("type" -> "keyword"))))

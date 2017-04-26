@@ -62,7 +62,7 @@ class ESLEvents(val client: ESClient, config: StorageClientConfig, val index: St
       ESUtils.getNumberOfReplicas(config, index.toUpperCase))
     val json =
       (estype ->
-        ("_all" -> ("enabled" -> 0)) ~
+        ("_all" -> ("enabled" -> false)) ~
         ("properties" ->
           ("name" -> ("type" -> "keyword")) ~
           ("eventId" -> ("type" -> "keyword")) ~
@@ -71,7 +71,7 @@ class ESLEvents(val client: ESClient, config: StorageClientConfig, val index: St
           ("entityId" -> ("type" -> "keyword")) ~
           ("targetEntityType" -> ("type" -> "keyword")) ~
           ("targetEntityId" -> ("type" -> "keyword")) ~
-          ("properties" -> ("enabled" -> 0)) ~
+          ("properties" -> ("enabled" -> false)) ~
           ("eventTime" -> ("type" -> "date")) ~
           ("tags" -> ("type" -> "keyword")) ~
           ("prId" -> ("type" -> "keyword")) ~
