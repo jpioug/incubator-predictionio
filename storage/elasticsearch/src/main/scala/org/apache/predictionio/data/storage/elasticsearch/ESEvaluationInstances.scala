@@ -59,9 +59,9 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
           ("evaluationClass" -> ("type" -> "keyword")) ~
           ("engineParamsGeneratorClass" -> ("type" -> "keyword")) ~
           ("batch" -> ("type" -> "keyword")) ~
-          ("evaluatorResults" -> ("type" -> "text") ~ ("index" -> "no")) ~
-          ("evaluatorResultsHTML" -> ("type" -> "text") ~ ("index" -> "no")) ~
-          ("evaluatorResultsJSON" -> ("type" -> "text") ~ ("index" -> "no"))))
+          ("evaluatorResults" -> ("type" -> "text")) ~
+          ("evaluatorResultsHTML" -> ("enabled" -> false)) ~
+          ("evaluatorResultsJSON" -> ("enabled" -> false))))
     ESUtils.createMapping(restClient, index, estype, compact(render(mappingJson)))
   } finally {
     restClient.close()
