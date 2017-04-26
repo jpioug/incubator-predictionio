@@ -244,7 +244,7 @@ else # default
   cd `dirname $0`
   BASE_DIR=`pwd`
 
-  ELASTICSEARCH_VERSION=5.2.2
+  ELASTICSEARCH_VERSION=5.3.1
   SPARK_FILE=spark-1.6.3-bin-hadoop2.6.tgz
   #ES_FILE=elasticsearch-1.7.6.tar.gz
   ES_FILE=elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
