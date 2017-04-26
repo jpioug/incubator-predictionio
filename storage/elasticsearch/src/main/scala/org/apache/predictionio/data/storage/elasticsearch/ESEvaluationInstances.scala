@@ -69,16 +69,17 @@ class ESEvaluationInstances(client: ESClient, config: StorageClientConfig, index
 
   def insert(i: EvaluationInstance): String = {
     val id = i.id match {
-      case x if x.isEmpty =>
-        val restClient = client.open()
-        try {
-          seq.genNext(estype, restClient).toString
-        } finally {
-          restClient.close()
+      case v if v.isEmpty =>
+        @scala.annotation.tailrec
+        def generateId: String = {
+          seq.genNext(estype).toString match {
+            case x if !get(x).isEmpty => generateId
+            case x => x
+          }
         }
-      case x => x
+        generateId
+      case v => v
     }
-
     update(i.copy(id = id))
     id
   }

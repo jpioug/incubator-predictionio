@@ -54,7 +54,8 @@ class ESSequences(client: ESClient, config: StorageClientConfig, index: String) 
     restClient.close()
   }
 
-  def genNext(name: String, restClient: RestClient): Long = {
+  def genNext(name: String): Long = {
+    val restClient = client.open()
     try {
       val entity = new NStringEntity(write("n" -> name), ContentType.APPLICATION_JSON)
       val response = restClient.performRequest(
@@ -75,6 +76,8 @@ class ESSequences(client: ESClient, config: StorageClientConfig, index: String) 
     } catch {
       case e: IOException =>
         throw new StorageClientException(s"Failed to update $index/$estype/$name", e)
+    } finally {
+      restClient.close()
     }
   }
 }

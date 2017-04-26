@@ -45,8 +45,6 @@ import org.apache.http.entity.StringEntity
 class ESLEvents(val client: ESClient, config: StorageClientConfig, val index: String)
     extends LEvents with Logging {
   implicit val formats = DefaultFormats.lossless ++ JodaTimeSerializers.all
-  private val seq = new ESSequences(client, config, index)
-  private val seqName = "events"
   val restClient = client.open()
 
   def getEsType(appId: Int, channelId: Option[Int] = None): String = {
@@ -118,7 +116,7 @@ class ESLEvents(val client: ESClient, config: StorageClientConfig, val index: St
       val estype = getEsType(appId, channelId)
       try {
         val id = event.eventId.getOrElse {
-          seq.genNext(estype, restClient).toString
+          ESEventsUtil.getBase64UUID
         }
         val json =
           ("eventId" -> id) ~

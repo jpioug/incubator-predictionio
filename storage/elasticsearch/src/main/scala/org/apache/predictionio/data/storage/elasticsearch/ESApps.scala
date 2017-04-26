@@ -60,15 +60,18 @@ class ESApps(client: ESClient, config: StorageClientConfig, index: String)
   }
 
   def insert(app: App): Option[Int] = {
-    val id =
-      if (app.id == 0) {
-        val restClient = client.open()
-        try {
-          seq.genNext(estype, restClient).toInt
-        } finally {
-          restClient.close()
+    val id = app.id match {
+      case v if v == 0 =>
+        @scala.annotation.tailrec
+        def generateId: Int = {
+          seq.genNext(estype).toInt match {
+            case x if !get(x).isEmpty => generateId
+            case x => x
+          }
         }
-      } else app.id
+        generateId
+      case v => v
+    }
     update(app.copy(id = id))
     Some(id)
   }

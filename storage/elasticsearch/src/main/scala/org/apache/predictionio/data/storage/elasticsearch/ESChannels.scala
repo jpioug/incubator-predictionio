@@ -58,15 +58,18 @@ class ESChannels(client: ESClient, config: StorageClientConfig, index: String)
   }
 
   def insert(channel: Channel): Option[Int] = {
-    val id =
-      if (channel.id == 0) {
-        val restClient = client.open()
-        try {
-          seq.genNext(estype, restClient).toInt
-        } finally {
-          restClient.close()
+    val id = channel.id match {
+      case v if v == 0 =>
+        @scala.annotation.tailrec
+        def generateId: Int = {
+          seq.genNext(estype).toInt match {
+            case x if !get(x).isEmpty => generateId
+            case x => x
+          }
         }
-      } else channel.id
+        generateId
+      case v => v
+    }
 
     if (update(channel.copy(id = id))) Some(id) else None
   }
