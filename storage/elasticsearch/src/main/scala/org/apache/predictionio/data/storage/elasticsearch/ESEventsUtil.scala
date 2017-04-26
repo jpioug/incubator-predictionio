@@ -104,7 +104,7 @@ object ESEventsUtil {
 
   val secureRandom: SecureRandom = new SecureRandom()
 
-  val sequenceNumber: AtomicInteger = new AtomicInteger(secureRandom.nextInt());
+  val sequenceNumber: AtomicInteger = new AtomicInteger(secureRandom.nextInt())
 
   val lastTimestamp: AtomicLong = new AtomicLong(0)
 
@@ -135,20 +135,19 @@ object ESEventsUtil {
           new Iterator[NetworkInterface] {
             def next = en.nextElement
             def hasNext = en.hasMoreElements
-          }
-            .foldLeft(None: Option[Array[Byte]])((x, y) =>
-              x match {
-                case v => v
-                case None =>
-                  y.isLoopback() match {
-                    case true =>
-                      y.getHardwareAddress match {
-                        case address if isValidAddress(address) => Some(address)
-                        case _ => None
-                      }
-                    case false => None
-                  }
-              })
+          }.foldLeft(None: Option[Array[Byte]])((x, y) =>
+            x match {
+              case None =>
+                y.isLoopback match {
+                  case true =>
+                    y.getHardwareAddress match {
+                      case address if isValidAddress(address) => Some(address)
+                      case _ => None
+                    }
+                  case false => None
+                }
+              case _ => x
+            })
       }
     } catch {
       case e: SocketException => None
@@ -164,13 +163,12 @@ object ESEventsUtil {
 
   def putLong(array: Array[Byte], l: Long, pos: Int, numberOfLongBytes: Int): Unit = {
     for (i <- 0 until numberOfLongBytes) {
-      val v = l >>> (i * 8)
-      array(pos + numberOfLongBytes - i - 1) = v.toByte
+      array(pos + numberOfLongBytes - i - 1) = (l >>> (i * 8)).toByte
     }
   }
 
   def getBase64UUID(): String = {
-    val sequenceId: Int = sequenceNumber.incrementAndGet() & 0xffffff
+    val sequenceId: Int = sequenceNumber.incrementAndGet & 0xffffff
     val timestamp: Long = synchronized {
       val t = Math.max(lastTimestamp.get, System.currentTimeMillis)
       if (sequenceId == 0) {
