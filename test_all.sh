@@ -18,6 +18,15 @@
 
 RUN_MODE=$1
 
+SCALA_VERSION=2.11.8
+SPARK_VERSION=2.1.0
+HADOOP_VERSION=2.6.5
+ELASTICSEARCH_VERSION=5.1.2
+SPARK_FILE=spark-${SPARK_VERSION}-bin-hadoop2.6.tgz
+#ES_FILE=elasticsearch-1.7.6.tar.gz
+ES_FILE=elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
+TEMPLATE_BRANCH=express-v1_2.11
+
 PYTHON_CMD=`which python3`
 if [ -z $PYTHON_CMD ] ; then
   PYTHON_CMD=python
@@ -51,8 +60,11 @@ build() {
   echo "#"
   echo "# Build PredictionIO"
   echo "#"
-  bash $BASE_DIR/make-distribution.sh -Delasticsearch.version=$ELASTICSEARCH_VERSION
-#  $BASE_DIR/sbt/sbt common/publishLocal data/publishLocal core/publishLocal dataElasticsearch1/assembly dataElasticsearch/assembly dataHbase/assembly dataHdfs/assembly dataJdbc/assembly dataLocalfs/assembly e2/publishLocal tools/assembly assembly/universal:packageBin
+  bash $BASE_DIR/make-distribution.sh \
+    -Dscala.version=$SCALA_VERSION \
+    -Dspark.version=$SPARK_VERSION \
+    -Dhadoop.version=$HADOOP_VERSION \
+    -Delasticsearch.version=$ELASTICSEARCH_VERSION
   if [ $? != 0 ] ; then
     echo "Build Failed!"
     exit 1
@@ -119,11 +131,15 @@ deploy_all() {
     fi
   fi
   tar zxvfC $BASE_DIR/$ES_FILE $PIO_HOME/vendors > /dev/null
+  SPARK_HOME=`ls -d $PIO_HOME/vendors/spark*`
 
 
   ES_NAME=ELASTICSEARCH
   PIO_ENV_FILE=$PIO_HOME/conf/pio-env.sh
   #replace_line "s/# PIO_STORAGE_SOURCES_${ES_NAME}_/PIO_STORAGE_SOURCES_${ES_NAME}_/" $PIO_ENV_FILE
+  replace_line "s/^SPARK_HOME/# SPARK_HOME/" $PIO_ENV_FILE
+  replace_line "s/^POSTGRES_JDBC_DRIVER/# POSTGRES_JDBC_DRIVER/" $PIO_ENV_FILE
+  replace_line "s/^MYSQL_JDBC_DRIVER/# MYSQL_JDBC_DRIVER/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_METADATA_SOURCE=${ES_NAME}/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_EVENTDATA_SOURCE=${ES_NAME}/" $PIO_ENV_FILE
   replace_line "s/PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE=PGSQL/PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE=LOCALFS/" $PIO_ENV_FILE
@@ -134,6 +150,7 @@ deploy_all() {
   echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_PORTS=9200' >> $PIO_ENV_FILE
   echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_SCHEMES=http' >> $PIO_ENV_FILE
   echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_HOME=$PIO_HOME/vendors/elasticsearch-'$ELASTICSEARCH_VERSION >> $PIO_ENV_FILE
+  echo 'SPARK_HOME='$SPARK_HOME >> $PIO_ENV_FILE
 
 #  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_PIO_META_NUM_OF_SHARDS=1' >> $PIO_ENV_FILE
 #  echo 'PIO_STORAGE_SOURCES_ELASTICSEARCH_PIO_META_NUM_OF_REPLICAS=2' >> $PIO_ENV_FILE
@@ -168,6 +185,9 @@ build_template() {
   rm -rf $TEMPLATE_NAME
   git clone https://github.com/jpioug/$TEMPLATE_NAME.git
   cd $TEMPLATE_NAME
+  if [ x"$TEMPLATE_BRANCH" != x ] ; then
+    git checkout -b $TEMPLATE_BRANCH origin/$TEMPLATE_BRANCH
+  fi
 
   $PIO_CMD app new MyApp1
   $PIO_CMD app list
@@ -244,10 +264,6 @@ else # default
   cd `dirname $0`
   BASE_DIR=`pwd`
 
-  ELASTICSEARCH_VERSION=5.3.1
-  SPARK_FILE=spark-1.6.3-bin-hadoop2.6.tgz
-  #ES_FILE=elasticsearch-1.7.6.tar.gz
-  ES_FILE=elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
 
   PIO_HOME=$BASE_DIR/PredictionIO-bin
 
