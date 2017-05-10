@@ -18,13 +18,16 @@
 
 RUN_MODE=$1
 
+#SCALA_VERSION=2.10.6
 SCALA_VERSION=2.11.8
+#SPARK_VERSION=1.6.3
 SPARK_VERSION=2.1.0
 HADOOP_VERSION=2.6.5
-ELASTICSEARCH_VERSION=5.1.2
+ELASTICSEARCH_VERSION=5.4.0
 SPARK_FILE=spark-${SPARK_VERSION}-bin-hadoop2.6.tgz
 #ES_FILE=elasticsearch-1.7.6.tar.gz
 ES_FILE=elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
+#TEMPLATE_BRANCH=express-v1
 TEMPLATE_BRANCH=express-v1_2.11
 
 PYTHON_CMD=`which python3`
@@ -173,7 +176,7 @@ start_all() {
   echo "#"
   echo "# Start $PIO_HOME/bin/pio-start-all"
   echo "#"
-  $PIO_HOME/bin/pio-start-all
+  /bin/bash -x $PIO_HOME/bin/pio-start-all
 }
 
 build_template() {
