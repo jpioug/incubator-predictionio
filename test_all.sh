@@ -282,7 +282,7 @@ PIO_CMD=$PIO_HOME/bin/pio
 TEMPLATE_DIR=$BASE_DIR/template
 TEMPLATE_NAME=incubator-predictionio-template-recommender
 
-PIP_CMD install --upgrade predictionio
+$PIP_CMD install --upgrade predictionio
 
 $PIO_CMD status
 
