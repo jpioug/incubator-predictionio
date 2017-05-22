@@ -39,6 +39,7 @@ services:
       - elasticsearch
       - hbase
       - postgres
+      - localstack
     volumes:
       - ~/.ivy2:/root/.ivy2
       - ~/.sbt:/root/.sbt

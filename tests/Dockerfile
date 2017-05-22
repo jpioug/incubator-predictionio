@@ -56,6 +56,11 @@ ENV PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE PGSQL
 # JVM settings
 ENV JVM_OPTS '-Dfile.encoding=UTF8 -Xms2048M -Xmx2048M -Xss8M -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=256M'
 
+# AWS settings
+ENV AWS_ACCESS_KEY_ID=foo
+ENV AWS_SECRET_ACCESS_KEY=foo
+ENV AWS_DEFAULT_REGION=us-east-1
+
 # Expose relevant ports
 # pio engine
 EXPOSE 8000
