@@ -28,6 +28,11 @@ services:
       POSTGRES_USER: pio
       POSTGRES_PASSWORD: pio
       POSTGRES_INITDB_ARGS: --encoding=UTF8
+  localstack:
+    image: atlassianlabs/localstack
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
   pio-testing:
     image: predictionio/pio-testing:latest
     depends_on:
