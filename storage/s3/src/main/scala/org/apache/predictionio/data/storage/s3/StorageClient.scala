@@ -37,6 +37,9 @@ class StorageClient(val config: StorageClientConfig) extends BaseStorageClient
         builder.withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpoint, region))
       case (None, Some(region)) => builder.withRegion(region)
     }
+    config.properties.get("DISABLE_CHUNKED_ENCODING") match {
+      case Some(x) if x.equalsIgnoreCase("true") => builder.disableChunkedEncoding()
+    }
     builder.build()
   }
 }

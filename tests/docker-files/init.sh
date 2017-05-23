@@ -20,4 +20,8 @@ set -e
 export PYTHONPATH=$PIO_HOME/tests:$PYTHONPATH
 echo "Sleeping $SLEEP_TIME seconds for all services to be ready..."
 sleep $SLEEP_TIME
+
+# create S3 bucket in localstack
+aws --endpoint-url=http://localstack:4572 --region=us-east-1 s3 mb s3://pio_bucket
+
 eval $@

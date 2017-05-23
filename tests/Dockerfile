@@ -42,11 +42,13 @@ COPY docker-files/init.sh init.sh
 COPY docker-files/env-conf/hbase-site.xml ${PIO_HOME}/conf/hbase-site.xml
 COPY docker-files/env-conf/pio-env.sh ${PIO_HOME}/conf/pio-env.sh
 COPY docker-files/pgpass /root/.pgpass
+COPY docker-files/awscredentials /root/.aws/credentials
 RUN chmod 600 /root/.pgpass
 
 # Python
 RUN pip install python-dateutil
 RUN pip install pytz
+RUN pip install awscli
 
 # Default repositories setup
 ENV PIO_STORAGE_REPOSITORIES_METADATA_SOURCE PGSQL
@@ -55,11 +57,6 @@ ENV PIO_STORAGE_REPOSITORIES_MODELDATA_SOURCE PGSQL
 
 # JVM settings
 ENV JVM_OPTS '-Dfile.encoding=UTF8 -Xms2048M -Xmx2048M -Xss8M -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=256M'
-
-# AWS settings
-ENV AWS_ACCESS_KEY_ID=foo
-ENV AWS_SECRET_ACCESS_KEY=foo
-ENV AWS_DEFAULT_REGION=us-east-1
 
 # Expose relevant ports
 # pio engine
