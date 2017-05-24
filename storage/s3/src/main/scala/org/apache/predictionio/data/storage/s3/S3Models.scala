@@ -23,7 +23,7 @@ import org.apache.predictionio.data.storage.Model
 import org.apache.predictionio.data.storage.Models
 import org.apache.predictionio.data.storage.StorageClientConfig
 
-import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.DeleteObjectRequest
 import com.amazonaws.services.s3.model.GetObjectRequest
 import com.amazonaws.services.s3.model.ObjectMetadata
@@ -33,7 +33,7 @@ import com.google.common.io.ByteStreams
 
 import grizzled.slf4j.Logging
 
-class S3Models(s3Client: AmazonS3Client, config: StorageClientConfig, prefix: String)
+class S3Models(s3Client: AmazonS3, config: StorageClientConfig, prefix: String)
     extends Models with Logging {
 
   def insert(i: Model): Unit = {
