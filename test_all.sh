@@ -262,7 +262,9 @@ if [ x"$RUN_MODE" = "xtemplate" ] ; then
   mkdir -p $BASE_DIR
   cd $BASE_DIR
 
-  PIO_HOME=/usr/share/predictionio
+  if [ "x$PIO_HOME" = x ] ; then
+    PIO_HOME=/usr/share/predictionio
+  fi
 else # default
   cd `dirname $0`
   BASE_DIR=`pwd`
