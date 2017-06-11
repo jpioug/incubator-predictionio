@@ -21,9 +21,9 @@ RUN_MODE=$1
 #SCALA_VERSION=2.10.6
 SCALA_VERSION=2.11.8
 #SPARK_VERSION=1.6.3
-SPARK_VERSION=2.1.0
+SPARK_VERSION=2.1.1
 HADOOP_VERSION=2.6.5
-ELASTICSEARCH_VERSION=5.4.0
+ELASTICSEARCH_VERSION=5.4.1
 SPARK_FILE=spark-${SPARK_VERSION}-bin-hadoop2.6.tgz
 #ES_FILE=elasticsearch-1.7.6.tar.gz
 ES_FILE=elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz
@@ -265,10 +265,16 @@ if [ x"$RUN_MODE" = "xtemplate" ] ; then
   if [ "x$PIO_HOME" = x ] ; then
     PIO_HOME=/usr/share/predictionio
   fi
+elif [ x"$RUN_MODE" = "xbuild" ] ; then
+  cd `dirname $0`
+  BASE_DIR=`pwd`
+  PIO_HOME=$BASE_DIR/PredictionIO-bin
+
+  build
+  exit
 else # default
   cd `dirname $0`
   BASE_DIR=`pwd`
-
 
   PIO_HOME=$BASE_DIR/PredictionIO-bin
 
