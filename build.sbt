@@ -64,7 +64,7 @@ javacOptions in (ThisBuild, compile) ++= Seq("-source", "1.7", "-target", "1.7",
   "-Xlint:deprecation", "-Xlint:unchecked")
 
 // Ignore differentiation of Spark patch levels
-sparkVersion in ThisBuild := sys.props.getOrElse("spark.version", (if (scalaBinaryVersion.value == "2.10") "1.6.3" else "2.1.0"))
+sparkVersion in ThisBuild := sys.props.getOrElse("spark.version", (if (scalaBinaryVersion.value == "2.10") "1.6.3" else "2.1.1"))
 
 sparkBinaryVersion in ThisBuild := binaryVersion(sparkVersion.value)
 
@@ -72,7 +72,7 @@ akkaVersion in ThisBuild := sys.props.getOrElse(
   "akka.version",
   scalaSparkDepsVersion(scalaBinaryVersion.value)(sparkBinaryVersion.value)("akka"))
 
-lazy val es = sys.props.getOrElse("elasticsearch.version", "1.7.6")
+lazy val es = sys.props.getOrElse("elasticsearch.version", "5.4.1")
 
 elasticsearchVersion in ThisBuild := es
 
