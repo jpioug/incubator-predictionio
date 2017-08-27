@@ -95,7 +95,7 @@ object PPythonEventStore {
         e.tags.mkString("\t"),
         e.prId.orNull,
         new Timestamp(e.creationTime.getMillis),
-        e.properties.fields.mapValues(_.toString)
+        e.properties.fields.mapValues(_.values.toString)
       )
     }.toDF(colNames: _*)
   }
@@ -139,7 +139,7 @@ object PPythonEventStore {
       (x._1,
         new Timestamp(m.firstUpdated.getMillis),
         new Timestamp(m.lastUpdated.getMillis),
-        m.fields.mapValues(_.toString)
+        m.fields.mapValues(_.values.toString)
       )
     }.toDF(colNames: _*)
   }
