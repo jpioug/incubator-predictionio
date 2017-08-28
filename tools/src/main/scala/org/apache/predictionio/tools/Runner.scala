@@ -183,7 +183,7 @@ object Runner extends EitherLogging {
   }
 
   def runOnSpark(
-      className: String,
+      resourceName: String,
       classArgs: Seq[String],
       sa: SparkArgs,
       extraJars: Seq[URI],
@@ -194,6 +194,10 @@ object Runner extends EitherLogging {
       argumentValue(sa.sparkPassThrough, "--deploy-mode").getOrElse("client")
     val master =
       argumentValue(sa.sparkPassThrough, "--master").getOrElse("local")
+    val isPython = resourceName match {
+      case x if x.endsWith(".py") => true
+      case _ => false
+    }
 
     (sa.scratchUri, deployMode, master) match {
       case (Some(u), "client", m) if m != "yarn-cluster" =>
@@ -219,10 +223,14 @@ object Runner extends EitherLogging {
       sys.env.getOrElse("SPARK_HOME", "."))
 
     // Local path to PredictionIO assembly JAR
-    val mainJar = Common.coreAssembly(pioHome) fold(
-        errStr => return Left(errStr),
-        assembly => handleScratchFile(fs, sa.scratchUri, assembly)
-      )
+    val assemblyJar = Common.coreAssembly(pioHome) fold(
+      errStr => return Left(errStr),
+      assembly => handleScratchFile(fs, sa.scratchUri, assembly)
+    )
+    val mainJar = isPython match {
+      case true => resourceName
+      case false => assemblyJar
+    }
 
     // Extra JARs that are needed by the driver
     val driverClassPathPrefix =
@@ -247,8 +255,13 @@ object Runner extends EitherLogging {
     val sparkSubmitCommand =
       Seq(Seq(sparkHome, "bin", "spark-submit").mkString(File.separator))
 
-    val sparkSubmitJarsList = WorkflowUtils.thirdPartyJars ++ deployedJars ++
-      Common.jarFilesForSpark(pioHome).map(_.toURI)
+    val sparkSubmitJarsList = isPython match {
+      case true =>
+        WorkflowUtils.thirdPartyJars ++ deployedJars ++
+          Common.jarFilesForSpark(pioHome).map(_.toURI) ++ Seq(new URI(assemblyJar))
+      case false => WorkflowUtils.thirdPartyJars ++ deployedJars ++
+        Common.jarFilesForSpark(pioHome).map(_.toURI)
+    }
     val sparkSubmitJars = if (sparkSubmitJarsList.nonEmpty) {
       Seq("--jars", sparkSubmitJarsList.map(_.toString).mkString(","))
     } else {
@@ -275,12 +288,17 @@ object Runner extends EitherLogging {
       Nil
     }
 
+    val className = isPython match {
+      case true => Nil
+      case false => Seq("--class", resourceName)
+    }
+
     val verboseArg = if (verbose) Seq("--verbose") else Nil
     val pioLogDir = Option(System.getProperty("pio.log.dir")).getOrElse(s"$pioHome/log")
 
     val sparkSubmitArgs = Seq(
       sa.sparkPassThrough,
-      Seq("--class", className),
+      className,
       sparkSubmitJars,
       sparkSubmitFiles,
       sparkSubmitExtraClasspaths,
@@ -298,11 +316,17 @@ object Runner extends EitherLogging {
       Seq("--env", pioEnvVars),
       verboseArg).flatten.filter(_ != "")
     info(s"Submission command: ${sparkSubmit.mkString(" ")}")
+    val extraEnv: Seq[(String, String)] = isPython match {
+      case true => Seq("CLASSPATH" -> "",
+        "SPARK_YARN_USER_ENV" -> pioEnvVars,
+        "PYTHONPATH" -> s"$pioHome/python")
+      case false => Seq("CLASSPATH" -> "",
+        "SPARK_YARN_USER_ENV" -> pioEnvVars)
+    }
     val proc = Process(
       sparkSubmit,
       None,
-      "CLASSPATH" -> "",
-      "SPARK_YARN_USER_ENV" -> pioEnvVars).run()
+      extraEnv:_*).run()
     Right((proc, () => cleanup(fs, sa.scratchUri)))
   }
 }
