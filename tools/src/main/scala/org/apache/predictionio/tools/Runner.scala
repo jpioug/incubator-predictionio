@@ -227,9 +227,10 @@ object Runner extends EitherLogging {
       errStr => return Left(errStr),
       assembly => handleScratchFile(fs, sa.scratchUri, assembly)
     )
-    val mainJar = isPython match {
-      case true => resourceName
-      case false => assemblyJar
+    val mainJar = if(isPython) {
+      resourceName
+    } else {
+      assemblyJar
     }
 
     // Extra JARs that are needed by the driver
@@ -255,11 +256,11 @@ object Runner extends EitherLogging {
     val sparkSubmitCommand =
       Seq(Seq(sparkHome, "bin", "spark-submit").mkString(File.separator))
 
-    val sparkSubmitJarsList = isPython match {
-      case true =>
-        WorkflowUtils.thirdPartyJars ++ deployedJars ++
-          Common.jarFilesForSpark(pioHome).map(_.toURI) ++ Seq(new URI(assemblyJar))
-      case false => WorkflowUtils.thirdPartyJars ++ deployedJars ++
+    val sparkSubmitJarsList = if(isPython) {
+      WorkflowUtils.thirdPartyJars ++ deployedJars ++
+        Common.jarFilesForSpark(pioHome).map(_.toURI) ++ Seq(new URI(assemblyJar))
+    } else {
+       WorkflowUtils.thirdPartyJars ++ deployedJars ++
         Common.jarFilesForSpark(pioHome).map(_.toURI)
     }
     val sparkSubmitJars = if (sparkSubmitJarsList.nonEmpty) {
@@ -288,9 +289,10 @@ object Runner extends EitherLogging {
       Nil
     }
 
-    val className = isPython match {
-      case true => Nil
-      case false => Seq("--class", resourceName)
+    val className = if(isPython) {
+      Nil
+    } else {
+      Seq("--class", resourceName)
     }
 
     val verboseArg = if (verbose) Seq("--verbose") else Nil
@@ -316,11 +318,12 @@ object Runner extends EitherLogging {
       Seq("--env", pioEnvVars),
       verboseArg).flatten.filter(_ != "")
     info(s"Submission command: ${sparkSubmit.mkString(" ")}")
-    val extraEnv: Seq[(String, String)] = isPython match {
-      case true => Seq("CLASSPATH" -> "",
+    val extraEnv: Seq[(String, String)] = if(isPython) {
+      Seq("CLASSPATH" -> "",
         "SPARK_YARN_USER_ENV" -> pioEnvVars,
         "PYTHONPATH" -> s"$pioHome/python")
-      case false => Seq("CLASSPATH" -> "",
+    } else {
+      Seq("CLASSPATH" -> "",
         "SPARK_YARN_USER_ENV" -> pioEnvVars)
     }
     val proc = Process(
