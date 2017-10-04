@@ -21,4 +21,8 @@ limitations under the License.
     <name>hbase.zookeeper.quorum</name>
     <value>hbase</value>
   </property>
+  <property>
+    <name>mapreduce.output.fileoutputformat.outputdir</name>
+    <value>/tmp</value>
+  </property>
 </configuration>
