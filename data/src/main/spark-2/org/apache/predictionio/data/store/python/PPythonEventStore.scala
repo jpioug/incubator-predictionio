@@ -21,6 +21,7 @@ import java.sql.Timestamp
 import org.apache.predictionio.data.store.PEventStore
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.joda.time.DateTime
+import org.json4s.{JNull, JValue}
 
 
 /** This object provides a set of operation to access Event Store
@@ -95,7 +96,11 @@ object PPythonEventStore {
         e.tags.mkString("\t"),
         e.prId.orNull,
         new Timestamp(e.creationTime.getMillis),
-        e.properties.fields.mapValues(_.values.toString)
+        e.properties.fields.mapValues(_ match {
+          case JNull => None
+          case x : JValue => x.values.toString
+          case _ => None
+        })
       )
     }.toDF(colNames: _*)
   }
@@ -139,7 +144,11 @@ object PPythonEventStore {
       (x._1,
         new Timestamp(m.firstUpdated.getMillis),
         new Timestamp(m.lastUpdated.getMillis),
-        m.fields.mapValues(_.values.toString)
+        m.fields.mapValues(_ match {
+          case JNull => None
+          case x : JValue => x.values.toString
+          case _ => None
+        })
       )
     }.toDF(colNames: _*)
   }
